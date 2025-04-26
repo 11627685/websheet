@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>websheet Demo</title>
+  
+  <style>
+    .hljs-ln-numbers {
+      text-align: right;
+      color: #7d7d7d;
+      padding-right: 15px;
+      border-right: 1px solid #555;
+    }
+
+    .code-container {
+      position: relative;
+    }
+
+    .copy-btn {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      padding: 4px 8px;
+      background: #f0f0f0;
+      border: 1px solid #ccc;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+
+    .copy-btn:hover {
+      background: #e0e0e0;
+    }
+  </style>
+  <link href="./dist/monokai-sublime.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="./dist/style.css">
+</head>
+
+<body>
+  <div id='yourElement'>
+  </div>
+
+  <div class="code-container">
+    <button class="copy-btn">复制</button>
+
+
+
+    <pre><code class="language-javascript"  >
+    let yourElement = document.getElementById("yourElement");
+    let wsheet = new websheet('HTML', yourElement,0,0,800,400);
+
+    /**
+    * 第一步 获取激活的sheet
+    */
+    let activeSheet = wsheet.ActiveSheet();
+    
+    /**
+    * 第二步   使用Border和BorderPr对象 设置边框样式和颜色
+    */
+    let b1Border = new websheet.Model.Border();
+    activeSheet.SetCellValue('A1','thin');
+    let  redthinBorderPr =new websheet.Model.BorderPr();
+    redthinBorderPr.borderStyle='thin';
+    redthinBorderPr.color= new websheet.Model.Color('red');
+    b1Border.SetAllBorder(redthinBorderPr);
+    activeSheet.SetCellBorder('B1',b1Border);
+
+    let d1Border = new websheet.Model.Border();
+    activeSheet.SetCellValue('C1','medium');
+    let  redmediumBorderPr =new websheet.Model.BorderPr();
+    redmediumBorderPr.borderStyle='medium';
+    redmediumBorderPr.color= new websheet.Model.Color('blue');
+    d1Border.SetAllBorder(redmediumBorderPr);
+    activeSheet.SetCellBorder('D1',d1Border);
+
+    let e1Border = new websheet.Model.Border();
+    activeSheet.SetCellValue('E1','dashed');
+    let  reddashedBorderPr =new websheet.Model.BorderPr();
+    reddashedBorderPr.borderStyle='dashed';
+    reddashedBorderPr.color= new websheet.Model.Color('green');
+    e1Border.SetAllBorder(reddashedBorderPr);
+    activeSheet.SetCellBorder('F1',e1Border);
+
+
+
+
+    let b3Border = new websheet.Model.Border();
+    activeSheet.SetCellValue(3,1,'dotted');
+    let  reddottedBorderPr =new websheet.Model.BorderPr();
+    reddottedBorderPr.borderStyle='dotted';
+    reddottedBorderPr.color= new websheet.Model.Color('red');
+    b3Border.SetAllBorder(reddottedBorderPr);
+    activeSheet.SetCellBorder('B3',b3Border);
+
+    let d3Border = new websheet.Model.Border();
+    activeSheet.SetCellValue('C3','thick');
+    let  redthickBorderPr =new websheet.Model.BorderPr();
+    redthickBorderPr.borderStyle='thick';
+    redthickBorderPr.color= new websheet.Model.Color('blue');
+    d3Border.SetAllBorder(redthickBorderPr);
+    activeSheet.SetCellBorder('D3',d3Border);
+
+    let f3Border = new websheet.Model.Border();
+    activeSheet.SetCellValue('E3','double');
+    let  reddoubleBorderPr =new websheet.Model.BorderPr();
+    reddoubleBorderPr.borderStyle='double';
+    reddoubleBorderPr.color= new websheet.Model.Color('green');
+    f3Border.SetAllBorder(reddoubleBorderPr);
+    activeSheet.SetCellBorder('F3',f3Border);
+
+
+
+    let b5Border = new websheet.Model.Border();
+    activeSheet.SetCellValue('A5','hair');
+    let  redhairBorderPr =new websheet.Model.BorderPr();
+    redhairBorderPr.borderStyle='hair';
+    redhairBorderPr.color= new websheet.Model.Color('red');
+    b5Border.SetAllBorder(redhairBorderPr);
+    activeSheet.SetCellBorder('B5',b5Border);
+
+    let d5Border = new websheet.Model.Border();
+    activeSheet.SetCellValue('C5','mediumDashed');
+    let  redmediumDashedBorderPr =new websheet.Model.BorderPr();
+    redmediumDashedBorderPr.borderStyle='mediumDashed';
+    redmediumDashedBorderPr.color= new websheet.Model.Color('blue');
+    d5Border.SetAllBorder(redmediumDashedBorderPr);
+    activeSheet.SetCellBorder('D5',d5Border);
+
+    let f5Border = new websheet.Model.Border();
+    activeSheet.SetCellValue('E5','dashDot');
+    let  reddashDotBorderPr =new websheet.Model.BorderPr();
+    reddashDotBorderPr.borderStyle='dashDot';
+    reddashDotBorderPr.color= new websheet.Model.Color('green');
+    f5Border.SetAllBorder(reddashDotBorderPr);
+    activeSheet.SetCellBorder('F5',f5Border);
+   
+
+
+    let b7Border = new websheet.Model.Border();
+    activeSheet.SetCellValue('A7','mediumDashDot');
+    let  redmediumDashDotBorderPr =new websheet.Model.BorderPr();
+    redmediumDashDotBorderPr.borderStyle='mediumDashDot';
+    redmediumDashDotBorderPr.color= new websheet.Model.Color('red');
+    b7Border.SetAllBorder(redmediumDashDotBorderPr);
+    activeSheet.SetCellBorder('B7',b7Border);
+
+    let d7Border = new websheet.Model.Border();
+    activeSheet.SetCellValue('C7','dashDotDot');
+    let  reddashDotDotBorderPr =new websheet.Model.BorderPr();
+    reddashDotDotBorderPr.borderStyle='dashDotDot';
+    reddashDotDotBorderPr.color= new websheet.Model.Color('blue');
+    d7Border.SetAllBorder(reddashDotDotBorderPr);
+    activeSheet.SetCellBorder('D7',d7Border);
+
+    let f7Border = new websheet.Model.Border();
+    activeSheet.SetCellValue('E7','mediumDashDotDot');
+    let  redmediumDashDotDotBorderPr =new websheet.Model.BorderPr();
+    redmediumDashDotDotBorderPr.borderStyle='mediumDashDotDot';
+    redmediumDashDotDotBorderPr.color= new websheet.Model.Color('green');
+    f7Border.SetAllBorder(redmediumDashDotDotBorderPr);
+    activeSheet.SetCellBorder('F7',f7Border);
+
+ 
+    //先忽略这里 这里设置行列的高度和宽度
+    activeSheet.setColWidth(1,160);
+    activeSheet.setColWidth(2,160);
+    activeSheet.setColWidth(3,160);
+    activeSheet.setColWidth(4,160);
+    activeSheet.setColWidth(5,160);
+    activeSheet.setColWidth(6,160);
+
+
+    /**
+     * 第三步   重新绘制表格
+     */
+
+    wsheet.BuildSheet();
+    wsheet.Draw();
+
+
+    </code></pre>
+  </div>
+  
+  <script type="module">
+    //let yourElement=document.getElementById("yourElement");
+    // window.websheet.hashvalue='66b76806d3d089f20fc92217e3e116722a99c654f6538d9916b266c736ee2314';
+    // window.websheet.signList=[{domian:'localhost',company:'websheet',signvalue:'1C7dwqFVAEq504alFHIN6cRkeiJuob2cnMSYhJ9cB99dgCl1xqqrywYSkivqnpPue03ySREJbLB7+B5EyxLEBMNgidLCMCmM68jSFAcJQzFQekXjQvIPMCMHR9EB3U3E'},]
+    
+    
+    let yourElement = document.getElementById("yourElement");
+   let wsheet = new websheet('HTML', yourElement, 0, 0, document.documentElement.clientWidth * 0.99, document.documentElement.clientHeight*0.6);
+
+   /**
+    * 第一步 获取激活的sheet
+    */
+    let activeSheet = wsheet.ActiveSheet();
+    
+    /**
+    * 第二步   使用Border和BorderPr对象 设置边框样式和颜色
+    */
+    let b1Border = new websheet.Model.Border();
+    activeSheet.SetCellValue('A1','thin');
+    let  redthinBorderPr =new websheet.Model.BorderPr();
+    redthinBorderPr.borderStyle='thin';
+    redthinBorderPr.color= new websheet.Model.Color('red');
+    b1Border.SetAllBorder(redthinBorderPr);
+    activeSheet.SetCellBorder('B1',b1Border);
+
+    let d1Border = new websheet.Model.Border();
+    activeSheet.SetCellValue('C1','medium');
+    let  redmediumBorderPr =new websheet.Model.BorderPr();
+    redmediumBorderPr.borderStyle='medium';
+    redmediumBorderPr.color= new websheet.Model.Color('blue');
+    d1Border.SetAllBorder(redmediumBorderPr);
+    activeSheet.SetCellBorder('D1',d1Border);
+
+    let e1Border = new websheet.Model.Border();
+    activeSheet.SetCellValue('E1','dashed');
+    let  reddashedBorderPr =new websheet.Model.BorderPr();
+    reddashedBorderPr.borderStyle='dashed';
+    reddashedBorderPr.color= new websheet.Model.Color('green');
+    e1Border.SetAllBorder(reddashedBorderPr);
+    activeSheet.SetCellBorder('F1',e1Border);
+
+
+
+
+    let b3Border = new websheet.Model.Border();
+    activeSheet.SetCellValue(3,1,'dotted');
+    let  reddottedBorderPr =new websheet.Model.BorderPr();
+    reddottedBorderPr.borderStyle='dotted';
+    reddottedBorderPr.color= new websheet.Model.Color('red');
+    b3Border.SetAllBorder(reddottedBorderPr);
+    activeSheet.SetCellBorder('B3',b3Border);
+
+    let d3Border = new websheet.Model.Border();
+    activeSheet.SetCellValue('C3','thick');
+    let  redthickBorderPr =new websheet.Model.BorderPr();
+    redthickBorderPr.borderStyle='thick';
+    redthickBorderPr.color= new websheet.Model.Color('blue');
+    d3Border.SetAllBorder(redthickBorderPr);
+    activeSheet.SetCellBorder('D3',d3Border);
+
+    let f3Border = new websheet.Model.Border();
+    activeSheet.SetCellValue('E3','double');
+    let  reddoubleBorderPr =new websheet.Model.BorderPr();
+    reddoubleBorderPr.borderStyle='double';
+    reddoubleBorderPr.color= new websheet.Model.Color('green');
+    f3Border.SetAllBorder(reddoubleBorderPr);
+    activeSheet.SetCellBorder('F3',f3Border);
+
+
+
+    let b5Border = new websheet.Model.Border();
+    activeSheet.SetCellValue('A5','hair');
+    let  redhairBorderPr =new websheet.Model.BorderPr();
+    redhairBorderPr.borderStyle='hair';
+    redhairBorderPr.color= new websheet.Model.Color('red');
+    b5Border.SetAllBorder(redhairBorderPr);
+    activeSheet.SetCellBorder('B5',b5Border);
+
+    let d5Border = new websheet.Model.Border();
+    activeSheet.SetCellValue('C5','mediumDashed');
+    let  redmediumDashedBorderPr =new websheet.Model.BorderPr();
+    redmediumDashedBorderPr.borderStyle='mediumDashed';
+    redmediumDashedBorderPr.color= new websheet.Model.Color('blue');
+    d5Border.SetAllBorder(redmediumDashedBorderPr);
+    activeSheet.SetCellBorder('D5',d5Border);
+
+    let f5Border = new websheet.Model.Border();
+    activeSheet.SetCellValue('E5','dashDot');
+    let  reddashDotBorderPr =new websheet.Model.BorderPr();
+    reddashDotBorderPr.borderStyle='dashDot';
+    reddashDotBorderPr.color= new websheet.Model.Color('green');
+    f5Border.SetAllBorder(reddashDotBorderPr);
+    activeSheet.SetCellBorder('F5',f5Border);
+   
+
+
+    let b7Border = new websheet.Model.Border();
+    activeSheet.SetCellValue('A7','mediumDashDot');
+    let  redmediumDashDotBorderPr =new websheet.Model.BorderPr();
+    redmediumDashDotBorderPr.borderStyle='mediumDashDot';
+    redmediumDashDotBorderPr.color= new websheet.Model.Color('red');
+    b7Border.SetAllBorder(redmediumDashDotBorderPr);
+    activeSheet.SetCellBorder('B7',b7Border);
+
+    let d7Border = new websheet.Model.Border();
+    activeSheet.SetCellValue('C7','dashDotDot');
+    let  reddashDotDotBorderPr =new websheet.Model.BorderPr();
+    reddashDotDotBorderPr.borderStyle='dashDotDot';
+    reddashDotDotBorderPr.color= new websheet.Model.Color('blue');
+    d7Border.SetAllBorder(reddashDotDotBorderPr);
+    activeSheet.SetCellBorder('D7',d7Border);
+
+    let f7Border = new websheet.Model.Border();
+    activeSheet.SetCellValue('E7','mediumDashDotDot');
+    let  redmediumDashDotDotBorderPr =new websheet.Model.BorderPr();
+    redmediumDashDotDotBorderPr.borderStyle='mediumDashDotDot';
+    redmediumDashDotDotBorderPr.color= new websheet.Model.Color('green');
+    f7Border.SetAllBorder(redmediumDashDotDotBorderPr);
+    activeSheet.SetCellBorder('F7',f7Border);
+
+ 
+    //先忽略这里 这里设置行列的高度和宽度
+    activeSheet.setColWidth(1,160);
+    activeSheet.setColWidth(2,160);
+    activeSheet.setColWidth(3,160);
+    activeSheet.setColWidth(4,160);
+    activeSheet.setColWidth(5,160);
+    activeSheet.setColWidth(6,160);
+
+
+    /**
+     * 第三步   重新绘制表格
+     */
+
+    wsheet.BuildSheet();
+    wsheet.Draw();
+
+
+  </script>
+
+  
+<script src="./dist/highlight.min.js"></script>
+<script src="./dist/highlightjs-line-numbers.min.js"></script>
+
+<script>
+
+  // 高亮代码并添加行号
+  document.addEventListener('DOMContentLoaded', () => {
+    hljs.highlightAll();
+    // 添加行号（支持 CSS 选择器）
+    hljs.initLineNumbersOnLoad();
+  });
+
+
+
+  document.querySelectorAll('.code-container').forEach(container => {
+    const btn = container.querySelector('.copy-btn');
+    const codeBlock = container.querySelector('code');
+
+    btn.addEventListener('click', () => {
+      // 现代浏览器 API（推荐）
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(codeBlock.textContent)
+          .then(() => {
+            btn.textContent = '已复制!';
+            setTimeout(() => btn.textContent = '复制', 1500);
+          });
+      }
+      // 兼容旧浏览器的降级方案
+      else {
+        const textarea = document.createElement('textarea');
+        textarea.value = codeBlock.textContent;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+        btn.textContent = '已复制!';
+        setTimeout(() => btn.textContent = '复制', 1500);
+      }
+    });
+  });
+
+</script>
+
+<script src="./dist/crypto-js.min.js"></script>
+<script src="./dist/jsrsasign-all-min.js"></script>
+<script type="text/javascript" src="./dist/xmlbuilder2.min.js"></script>
+<script type="text/javascript" src="./dist/websheet.umd.js"></script>
+</body>
+
+</html>

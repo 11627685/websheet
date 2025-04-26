@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>websheet Demo</title>
+
+  <style>
+    .hljs-ln-numbers {
+      text-align: right;
+      color: #7d7d7d;
+      padding-right: 15px;
+      border-right: 1px solid #555;
+    }
+
+    .code-container {
+      position: relative;
+    }
+
+    .copy-btn {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      padding: 4px 8px;
+      background: #f0f0f0;
+      border: 1px solid #ccc;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+
+    .copy-btn:hover {
+      background: #e0e0e0;
+    }
+  </style>
+  <link href="./dist/monokai-sublime.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="./dist/style.css">
+</head>
+
+<body>
+  <div id='yourElement'>
+  </div>
+
+  <div class="code-container">
+    <button class="copy-btn">复制</button>
+
+
+
+    <pre><code class="language-javascript"  >
+      const jsonString = ` 
+      [
+      {
+        "employeeId": "EM001",
+        "name": "李强",
+        "gender": "男",
+        "age": 32,
+        "department": "技术部",
+        "position": "高级软件工程师",
+        "hireDate": "2018-05-15",
+        "email": "zhangwei@company.com",
+        "phone": "+86 13812345678",
+        "salary": 28000,
+        "status": "在职"
+      },
+      {
+        "employeeId": "EM002",
+        "name": "王芳",
+        "gender": "女",
+        "age": 28,
+        "department": "人力资源部",
+        "position": "招聘主管",
+        "hireDate": "2020-09-22",
+        "email": "wangfang@company.com",
+        "phone": "+86 13987654321",
+        "salary": 18000,
+        "status": "在职"
+      } 
+    ] ` ;
+    
+    
+      const employees = JSON.parse(jsonString);
+    
+    
+      let yourElement = document.getElementById("1111111");
+      let wsheet = new websheet('yourID', yourElement);
+      let workbook = wsheet.Workbook();
+      workbook.AddUserDefineFunction(UDF);
+    
+      /**
+       * 第一步 获取激活的sheet
+       */
+      let activeSheet = wsheet.ActiveSheet();
+      /**
+       * 隶书
+       */
+      let newFontls = new websheet.Model.Font();
+      newFontls.name = '隶书';
+      newFontls.sz = 18;
+      newFontls.color.rgb = '#FFFFFF';
+    
+      activeSheet.SetCellFont('C2', newFontls);
+      let centeCenter = new websheet.Model.CellAlignment();
+      centeCenter.horizontal = 'center';//垂直方面
+      centeCenter.vertical = 'center';//水平方向
+      activeSheet.SetCellAlignment('C2', centeCenter); // 
+    
+    
+      //自定义 -薪资格式化
+      let numFmt200 = new websheet.Model.NumFmt();
+      numFmt200.numFmtId = 200;
+      numFmt200.formatCode = '#,##0.0000_);[Red]\(#,##0.0000\)';
+    
+      let rightCenter = new websheet.Model.CellAlignment();
+      rightCenter.horizontal = 'right';//垂直方面
+      rightCenter.vertical = 'center';//水平方向
+      activeSheet.SetCellAlignment('L13', rightCenter);  
+      activeSheet.SetCellNumFmts('L3:L13', numFmt200);
+    
+    
+      //下拉选择
+    
+      const jsb = document.createElement('option');
+      jsb.value = '技术部';
+      jsb.textContent = '技术部';
+    
+      const rlb = document.createElement('option');
+      rlb.value = '人力资源部';
+      rlb.textContent = '人力资源部';
+    
+      const glb = document.createElement('option');
+      glb.value = '管理层';
+      glb.textContent = '管理层';
+    
+      let optionsBm = [jsb, rlb, glb];
+    
+      activeSheet.setCellEditor('G3:G12', websheet.Model.SelectCell, optionsBm)
+    
+      activeSheet.setRowHeight(2, 22);
+    
+    
+      activeSheet.SetCellValue(13, 5, '平均年龄：');
+      activeSheet.SetCellValue(13,6, '=AVERAGE(F3:F12)');
+    
+      activeSheet.SetCellValue(13, 11, '薪资总计：');
+      activeSheet.SetCellValue(13, 12, '=SUM(L3:L12)');
+      activeSheet.WorkFormula(); //重建公式
+      activeSheet.setColWidth(1, 50)
+      activeSheet.setColWidth(2, 50)
+      activeSheet.setColWidth(3, 100)
+      activeSheet.setColWidth(4, 100)
+      activeSheet.setColWidth(5, 100)
+      activeSheet.setColWidth(6, 100)
+      activeSheet.setColWidth(7, 100)
+      activeSheet.setColWidth(8, 100)
+      activeSheet.setColWidth(9, 100)
+      activeSheet.setColWidth(10, 160)
+      activeSheet.setColWidth(11, 160)
+      activeSheet.setColWidth(12, 100)
+    
+      
+    
+      let tableColumn = [];
+      let col = 1;
+      tableColumn.push('工号1');
+      tableColumn.push('姓名2');
+      tableColumn.push('性别3');
+      tableColumn.push('年龄4');
+      tableColumn.push('部门5');
+      tableColumn.push('职称6');
+      tableColumn.push('入职日期7');
+      tableColumn.push('电子邮件8');
+      tableColumn.push('移动电话9');
+      tableColumn.push('薪资10');
+      tableColumn.push('状态11');
+    
+       //activeSheet.addTable('测试1', 'C2:L12', tableColumn, 'TableStyleMedium28');
+      activeSheet.addTable('测试1', 'C2:L12', tableColumn, 'TableStyleMedium2');
+      
+    
+      /**
+       * 这里只是展示了可以重新设置，如果你是从服务器拿到的文件，可以通过这种方式重新设置一下表格的名称，方便下面的json处理
+       * 一但设置，程序就采用codeName方式去找内容，找不到就是空
+       */
+      let tableColumn2 = [];
+      tableColumn2.push({ showName: '工号', codeName: 'employeeId' });
+      tableColumn2.push({ showName: '姓名', codeName: 'name' });
+      tableColumn2.push({ showName: '性别', codeName: 'gender' });
+      tableColumn2.push({ showName: '年龄', codeName: 'age' });
+      tableColumn2.push({ showName: '部门', codeName: 'department' });
+      tableColumn2.push({ showName: '职称', codeName: 'position' });
+      tableColumn2.push({ showName: '入职日期', codeName: 'hireDate' });
+      tableColumn2.push({ showName: '电子邮件', codeName: 'email' });
+      tableColumn2.push({ showName: '移动电话', codeName: 'phone' });
+      tableColumn2.push({ showName: '薪资', codeName: 'salary' });
+      tableColumn2.push({ showName: '状态', codeName: 'status' });
+      activeSheet.SetTableColumn('测试1', tableColumn2);
+     
+      activeSheet.SetTableData('测试1', employees);//数组对象，按照顺序这是表格数据，根据数组的长度确认表格长度
+    
+    
+     
+      activeSheet.cacl();//公式计算
+    
+      wsheet.BuildSheet();
+      wsheet.Draw();
+    
+      let aaa=activeSheet.GetTableDate('测试1')
+    
+      console.log('11111111'+aaa);
+
+    </code></pre>
+  </div>
+
+  <script type="module">
+    //let yourElement=document.getElementById("yourElement");
+    // window.websheet.hashvalue='66b76806d3d089f20fc92217e3e116722a99c654f6538d9916b266c736ee2314';
+    // window.websheet.signList=[{domian:'localhost',company:'websheet',signvalue:'1C7dwqFVAEq504alFHIN6cRkeiJuob2cnMSYhJ9cB99dgCl1xqqrywYSkivqnpPue03ySREJbLB7+B5EyxLEBMNgidLCMCmM68jSFAcJQzFQekXjQvIPMCMHR9EB3U3E'},]
+
+    const jsonString = ` 
+  [
+  {
+    "employeeId": "EM001",
+    "name": "李强",
+    "gender": "男",
+    "age": 32,
+    "department": "技术部",
+    "position": "高级软件工程师",
+    "hireDate": "2018-05-15",
+    "email": "zhangwei@company.com",
+    "phone": "+86 13812345678",
+    "salary": 28000,
+    "status": "在职"
+  },
+  {
+    "employeeId": "EM002",
+    "name": "王芳",
+    "gender": "女",
+    "age": 28,
+    "department": "人力资源部",
+    "position": "招聘主管",
+    "hireDate": "2020-09-22",
+    "email": "wangfang@company.com",
+    "phone": "+86 13987654321",
+    "salary": 18000,
+    "status": "在职"
+  },
+  {
+    "employeeId": "EM003",
+    "name": "张一",
+    "gender": "男",
+    "age": 45,
+    "department": "管理层",
+    "position": "技术总监",
+    "hireDate": "2015-11-03",
+    "email": "liqiang@company.com",
+    "phone": "+86 13611223344",
+    "salary": 45000,
+    "status": "在职"
+  } ,
+   {
+  "employeeId": "EM004",
+  "name": "陈雪",
+  "gender": "女",
+  "age": 26,
+  "department": "市场部",
+  "position": "市场经理",
+  "hireDate": "2021-03-10",
+  "email": "chenxue@company.com",
+  "phone": "+86 13512345678",
+  "salary": 22000,
+  "status": "在职"
+},
+{
+  "employeeId": "EM005",
+  "name": "王涛",
+  "gender": "男",
+  "age": 35,
+  "department": "技术部",
+  "position": "后端开发工程师",
+  "hireDate": "2019-08-20",
+  "email": "wangtao@company.com",
+  "phone": "+86 13722334455",
+  "salary": 25000,
+  "status": "在职"
+},
+{
+  "employeeId": "EM006",
+  "name": "刘婷",
+  "gender": "女",
+  "age": 29,
+  "department": "财务部",
+  "position": "财务分析师",
+  "hireDate": "2022-01-05",
+  "email": "liuting@company.com",
+  "phone": "+86 13933445566",
+  "salary": 19000,
+  "status": "在职"
+},
+{
+  "employeeId": "EM007",
+  "name": "赵刚",
+  "gender": "男",
+  "age": 40,
+  "department": "管理层",
+  "position": "运营总监",
+  "hireDate": "2016-07-12",
+  "email": "zhaogang@company.com",
+  "phone": "+86 13844556677",
+  "salary": 50000,
+  "status": "在职"
+},
+{
+  "employeeId": "EM008",
+  "name": "周敏",
+  "gender": "女",
+  "age": 31,
+  "department": "销售部",
+  "position": "销售主管",
+  "hireDate": "2020-11-30",
+  "email": "zhoumin@company.com",
+  "phone": "+86 15066778899",
+  "salary": 23000,
+  "status": "在职"
+},
+{
+  "employeeId": "EM009",
+  "name": "徐磊",
+  "gender": "男",
+  "age": 27,
+  "department": "技术部",
+  "position": "前端开发工程师",
+  "hireDate": "2021-09-15",
+  "email": "xulei@company.com",
+  "phone": "+86 15177889900",
+  "salary": 21000,
+  "status": "在职"
+},
+{
+  "employeeId": "EM010",
+  "name": "吴雨",
+  "gender": "女",
+  "age": 24,
+  "department": "客户支持部",
+  "position": "客服专员",
+  "hireDate": "2023-04-01",
+  "email": "wuyu@company.com",
+  "phone": "+86 15288990011",
+  "salary": 12000,
+  "status": "在职"
+},
+{
+  "employeeId": "EM011",
+  "name": "多一行",
+  "gender": "女",
+  "age": 24,
+  "department": "客户支持部",
+  "position": "客服专员",
+  "hireDate": "2023-04-01",
+  "email": "duoyu@company.com",
+  "phone": "+86 15288990011",
+  "salary": 12000,
+  "status": "在职"
+}
+
+] ` ;
+
+
+  const employees = JSON.parse(jsonString);
+
+
+  let yourElement = document.getElementById("yourElement");
+   let wsheet = new websheet('HTML', yourElement, 0, 0, document.documentElement.clientWidth * 0.99, document.documentElement.clientHeight*0.6);
+
+  console.log('11111111');
+
+  /**
+   * 第一步 获取激活的sheet
+   */
+  let activeSheet = wsheet.ActiveSheet();
+  /**
+   * 隶书
+   */
+  let newFontls = new websheet.Model.Font();
+  newFontls.name = '隶书';
+  newFontls.sz = 18;
+  newFontls.color.rgb = '#FFFFFF';
+
+  activeSheet.SetCellFont('C2', newFontls);
+  let centeCenter = new websheet.Model.CellAlignment();
+  centeCenter.horizontal = 'center';//垂直方面
+  centeCenter.vertical = 'center';//水平方向
+  activeSheet.SetCellAlignment('C2', centeCenter); // 
+
+
+  //自定义 -薪资格式化
+  let numFmt200 = new websheet.Model.NumFmt();
+  numFmt200.numFmtId = 200;
+  numFmt200.formatCode = '#,##0.0000_);[Red]\(#,##0.0000\)';
+
+  let rightCenter = new websheet.Model.CellAlignment();
+  rightCenter.horizontal = 'right';//垂直方面
+  rightCenter.vertical = 'center';//水平方向
+  activeSheet.SetCellAlignment('L13', rightCenter);  
+  activeSheet.SetCellNumFmts('L3:L13', numFmt200);
+
+
+  //下拉选择
+
+  const jsb = document.createElement('option');
+  jsb.value = '技术部';
+  jsb.textContent = '技术部';
+
+  const rlb = document.createElement('option');
+  rlb.value = '人力资源部';
+  rlb.textContent = '人力资源部';
+
+  const glb = document.createElement('option');
+  glb.value = '管理层';
+  glb.textContent = '管理层';
+
+  let optionsBm = [jsb, rlb, glb];
+
+  activeSheet.setCellEditor('G3:G12', websheet.Model.SelectCell, optionsBm)
+
+  activeSheet.setRowHeight(2, 22);
+  console.log('2222222222222');
+
+
+  activeSheet.SetCellValue(13, 5, '平均年龄：');
+  activeSheet.SetCellValue(13,6, '=AVERAGE(F3:F12)');
+
+  activeSheet.SetCellValue(13, 11, '薪资总计：');
+  activeSheet.SetCellValue(13, 12, '=SUM(L3:L12)');
+  activeSheet.WorkFormula(); //重建公式
+  activeSheet.setColWidth(1, 50)
+  activeSheet.setColWidth(2, 50)
+  activeSheet.setColWidth(3, 100)
+  activeSheet.setColWidth(4, 100)
+  activeSheet.setColWidth(5, 100)
+  activeSheet.setColWidth(6, 100)
+  activeSheet.setColWidth(7, 100)
+  activeSheet.setColWidth(8, 100)
+  activeSheet.setColWidth(9, 100)
+  activeSheet.setColWidth(10, 160)
+  activeSheet.setColWidth(11, 160)
+  activeSheet.setColWidth(12, 100)
+
+  
+
+  let tableColumn = [];
+  let col = 1;
+  tableColumn.push('工号1');
+  tableColumn.push('姓名2');
+  tableColumn.push('性别3');
+  tableColumn.push('年龄4');
+  tableColumn.push('部门5');
+  tableColumn.push('职称6');
+  tableColumn.push('入职日期7');
+  tableColumn.push('电子邮件8');
+  tableColumn.push('移动电话9');
+  tableColumn.push('薪资10');
+  tableColumn.push('状态11');
+
+   //activeSheet.addTable('测试1', 'C2:L12', tableColumn, 'TableStyleMedium28');
+  activeSheet.addTable('测试1', 'C2:L12', tableColumn, 'TableStyleMedium2');
+  
+
+  /**
+   * 这里只是展示了可以重新设置，如果你是从服务器拿到的文件，可以通过这种方式重新设置一下表格的名称，方便下面的json处理
+   * 一但设置，程序就采用codeName方式去找内容，找不到就是空
+   */
+  let tableColumn2 = [];
+  tableColumn2.push({ showName: '工号', codeName: 'employeeId' });
+  tableColumn2.push({ showName: '姓名', codeName: 'name' });
+  tableColumn2.push({ showName: '性别', codeName: 'gender' });
+  tableColumn2.push({ showName: '年龄', codeName: 'age' });
+  tableColumn2.push({ showName: '部门', codeName: 'department' });
+  tableColumn2.push({ showName: '职称', codeName: 'position' });
+  tableColumn2.push({ showName: '入职日期', codeName: 'hireDate' });
+  tableColumn2.push({ showName: '电子邮件', codeName: 'email' });
+  tableColumn2.push({ showName: '移动电话', codeName: 'phone' });
+  tableColumn2.push({ showName: '薪资', codeName: 'salary' });
+  tableColumn2.push({ showName: '状态', codeName: 'status' });
+  activeSheet.SetTableColumn('测试1', tableColumn2);
+ 
+  activeSheet.SetTableData('测试1', employees);//数组对象，按照顺序这是表格数据，根据数组的长度确认表格长度
+
+
+ 
+  activeSheet.cacl();//公式计算
+
+  wsheet.BuildSheet();
+  wsheet.Draw();
+
+  let aaa=activeSheet.GetTableDate('测试1')
+
+  console.log('11111111'+aaa);
+
+
+  </script>
+
+
+ <script src="./dist/highlight.min.js"></script>
+  <script src="./dist/highlightjs-line-numbers.min.js"></script>
+
+  <script>
+
+    // 高亮代码并添加行号
+    document.addEventListener('DOMContentLoaded', () => {
+      hljs.highlightAll();
+      // 添加行号（支持 CSS 选择器）
+      hljs.initLineNumbersOnLoad();
+    });
+
+
+
+    document.querySelectorAll('.code-container').forEach(container => {
+      const btn = container.querySelector('.copy-btn');
+      const codeBlock = container.querySelector('code');
+
+      btn.addEventListener('click', () => {
+        // 现代浏览器 API（推荐）
+        if (navigator.clipboard) {
+          navigator.clipboard.writeText(codeBlock.textContent)
+            .then(() => {
+              btn.textContent = '已复制!';
+              setTimeout(() => btn.textContent = '复制', 1500);
+            });
+        }
+        // 兼容旧浏览器的降级方案
+        else {
+          const textarea = document.createElement('textarea');
+          textarea.value = codeBlock.textContent;
+          document.body.appendChild(textarea);
+          textarea.select();
+          document.execCommand('copy');
+          document.body.removeChild(textarea);
+          btn.textContent = '已复制!';
+          setTimeout(() => btn.textContent = '复制', 1500);
+        }
+      });
+    });
+
+  </script>
+
+
+
+<script src="./dist/highlight.min.js"></script>
+<script src="./dist/highlightjs-line-numbers.min.js"></script>
+
+<script>
+
+  // 高亮代码并添加行号
+  document.addEventListener('DOMContentLoaded', () => {
+    hljs.highlightAll();
+    // 添加行号（支持 CSS 选择器）
+    hljs.initLineNumbersOnLoad();
+  });
+
+
+
+  document.querySelectorAll('.code-container').forEach(container => {
+    const btn = container.querySelector('.copy-btn');
+    const codeBlock = container.querySelector('code');
+
+    btn.addEventListener('click', () => {
+      // 现代浏览器 API（推荐）
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(codeBlock.textContent)
+          .then(() => {
+            btn.textContent = '已复制!';
+            setTimeout(() => btn.textContent = '复制', 1500);
+          });
+      }
+      // 兼容旧浏览器的降级方案
+      else {
+        const textarea = document.createElement('textarea');
+        textarea.value = codeBlock.textContent;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+        btn.textContent = '已复制!';
+        setTimeout(() => btn.textContent = '复制', 1500);
+      }
+    });
+  });
+
+</script>
+<script src="./dist/crypto-js.min.js"></script>
+<script src="./dist/jsrsasign-all-min.js"></script>
+<script type="text/javascript" src="./dist/xmlbuilder2.min.js"></script>
+<script type="text/javascript" src="./dist/websheet.umd.js"></script>
+</body>
+
+</html>
