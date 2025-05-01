@@ -4,7 +4,16 @@
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Websheet is a pure front-end xlsx file display control developed based on HTML5 CANVAS and JAVASCRIPT. This control focuses on page display and mainly implements functions including file import/export, text display, formatted text, merged cells, borders, background colors, setting row/column width/height, hiding rows/columns, view locking, basic tables, undo/redo, keyboard shortcuts, formula parsing and calculation. It supports custom functions, cell display/editing, and right-click menu customization.
 
 
+##  Translations
 
+ <a target="_blank" href="https://github.com/11627685/websheet/blob/main/README_zh.md">中文文档</a>
+
+
+##  homepage
+
+ <a target="_blank" href="http://wiki.websheet.cn/zh/home">主页</a>
+ <a target="_blank" href="http://wiki.websheet.cn/en/home">homepage</a>
+ 
 ---
 # 1. Getting Started
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;If you're new to Websheet, you can start with the following two articles. These will teach you how to load Websheet in pure HTML and VUE, how to render the control on your page, and how to load local or online EXCEL files. You can also see complete, usable examples at the demo address.
