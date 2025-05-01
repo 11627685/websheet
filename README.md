@@ -8,10 +8,9 @@
 
  <a target="_blank" href="https://github.com/11627685/websheet/blob/main/README_zh.md">中文文档</a>
 
-
 ##  homepage
-
  <a target="_blank" href="http://wiki.websheet.cn/zh/home">主页</a>
+ <p>
  <a target="_blank" href="http://wiki.websheet.cn/en/home">homepage</a>
  
 ---
