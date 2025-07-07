@@ -146,6 +146,7 @@
 
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; All demo code and display address: <a target="_blank" href="http://www.websheet.cn/xlsx/">Demo</a>
 # 5. About Copyright
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;localhost is free.
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Commercial use is prohibited without permission.
   
 ---
