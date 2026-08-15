@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>字体与字号测试 — WebSheet</title>
+  <script src="./dist/websheet.umd.js"></script>
+  <link rel="stylesheet" href="./dist/style.css">
+  <style>
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif;
+      color: #1f2937;
+      background: #f3f4f6;
+    }
+    #header {
+      padding: 12px 20px;
+      background: #fff;
+      border-bottom: 1px solid #d1d5db;
+    }
+    #header h1 { margin: 0 0 4px 0; font-size: 16px; }
+    #header .desc { font-size: 12px; color: #6b7280; }
+    #toolbar {
+      padding: 8px 20px;
+      background: #fafafa;
+      border-bottom: 1px solid #d1d5db;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    #toolbar button {
+      padding: 5px 12px;
+      font-size: 12px;
+      cursor: pointer;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      background: #fff;
+    }
+    #toolbar button:hover { background: #e8f0fe; }
+    #toolbar .hint { font-size: 12px; color: #6b7280; margin-left: 8px; }
+    #container { width: 100%; height: 580px; background: #fff; }
+    #legend {
+      padding: 10px 20px;
+      font-size: 12px;
+      color: #4b5563;
+      background: #fff;
+      border-top: 1px solid #e5e7eb;
+    }
+    #legend span { display: inline-block; margin-right: 18px; }
+    #legend b { color: #111827; }
+  </style>
+</head>
+<body>
+  <div id="header">
+    <h1>字体与字号测试</h1>
+    <div class="desc">三列对照：A列宋体基准 · B列目标字体展示 · C列字体颜色示例（同行字号递增）</div>
+  </div>
+  <div id="toolbar">
+    <button onclick="applyTestData()">重新应用测试数据</button>
+    <button onclick="clearFormatting()">清除格式</button>
+    <span class="hint">提示：可选中单元格后用工具栏手动调整字体/字号/颜色，Ctrl+Z 撤销</span>
+  </div>
+  <div id="container"></div>
+  <div id="legend">
+    <span><b>A列</b>：宋体对照（同行字号）</span>
+    <span><b>B列</b>：目标字体（同行字号）</span>
+    <span><b>C列</b>：目标字体 + 颜色</span>
+  </div>
+
+  <script>
+    var container = document.getElementById('container');
+    websheet.ShowToolbar = true;
+    var ws = new websheet('font-size-test', container);
+    var activeSheet = ws.ActiveSheet();
+    var wbView = ws.getWorkBookView();
+    var sheetView = wbView.getSheetView();
+
+    // 测试数据：字体 × 字号 × 颜色（A/B 列显示字体名，C 列显示测试文本）
+    var tests = [
+      { font: '黑体',            size: 14, color: '#424242', text: '字体测试 Font 123' },
+      { font: '楷体',            size: 16, color: '#E53935', text: '字体测试 Font 123' },
+      { font: '仿宋',            size: 18, color: '#FB8C00', text: '字体测试 Font 123' },
+      { font: '隶书',            size: 20, color: '#F9A825', text: '字体测试 Font 123' },
+      { font: '微软雅黑',        size: 22, color: '#43A047', text: '字体测试 Font 123' },
+      { font: 'Times New Roman', size: 24, color: '#00ACC1', text: 'Font Test 123 Abc' },
+      { font: 'Arial',           size: 28, color: '#1E88E5', text: 'Font Test 123 Abc' },
+      { font: 'Courier New',     size: 32, color: '#5E35B1', text: 'Font Test 123 Abc' },
+      { font: 'Georgia',         size: 36, color: '#8E24AA', text: 'Font Test 123 Abc' },
+      { font: 'Verdana',         size: 40, color: '#D81B60', text: 'Font Test 123 Abc' }
+    ];
+
+    function applyTestData() {
+      // 表头
+      activeSheet.SetCellValue('A1', '宋体对照（基准）');
+      activeSheet.SetCellValue('B1', '目标字体展示');
+      activeSheet.SetCellValue('C1', '字体颜色示例');
+
+      // 填充每行：A=字体名(宋体渲染) B=字体名(目标字体渲染) C=测试文本(目标字体+颜色)
+      tests.forEach(function (t, i) {
+        var row = i + 2;
+        activeSheet.SetCellValue('A' + row, t.font);
+        activeSheet.SetCellValue('B' + row, t.font);
+        activeSheet.SetCellValue('C' + row, t.text);
+      });
+
+      // 表头样式
+      sheetView.setActiveRange('A1:C1');
+      sheetView.SetFontSize(13);
+      sheetView.SetFontColor('#374151');
+
+      // 逐行应用字体/字号/颜色
+      tests.forEach(function (t, i) {
+        var row = i + 2;
+        // A列：宋体 + 同行字号
+        sheetView.setActiveRange('A' + row);
+        sheetView.SetFontFamily('宋体');
+        sheetView.SetFontSize(t.size);
+        // B列：目标字体 + 同行字号
+        sheetView.setActiveRange('B' + row);
+        sheetView.SetFontFamily(t.font);
+        sheetView.SetFontSize(t.size);
+        // C列：目标字体 + 同行字号 + 颜色
+        sheetView.setActiveRange('C' + row);
+        sheetView.SetFontFamily(t.font);
+        sheetView.SetFontSize(t.size);
+        sheetView.SetFontColor(t.color);
+      });
+
+      // 列宽
+      activeSheet.setColWidth(1, 240);
+      activeSheet.setColWidth(2, 240);
+      activeSheet.setColWidth(3, 260);
+      // 行高随字号
+      activeSheet.setRowHeight(1, 26);
+      tests.forEach(function (t, i) {
+        activeSheet.setRowHeight(i + 2, t.size + 18);
+      });
+
+      ws.BuildSheet();
+      ws.Draw();
+    }
+
+    function clearFormatting() {
+      // 通过撤销栈回到初始
+      var undoLen = wbView.unDoRedo.GetUndoLength();
+      for (var i = 0; i < undoLen; i++) {
+        wbView.unDoRedo.Undo();
+      }
+      ws.BuildSheet();
+      ws.Draw();
+    }
+
+    // 初始应用
+    applyTestData();
+  </script>
+</body>
+</html>

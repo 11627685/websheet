@@ -1,0 +1,53 @@
+WebSheet 开源许可协议
+====================
+
+版权所有 © 2026 WebSheet   ZhangXinPan
+mail：1627685@qq.com
+
+本许可协议在 MIT 许可证基础上附加"水印保留"条款。除下文第 2 条明确规定的水印保留义务外，
+本软件**不附带任何其他使用限制**（包括但不限于域名限制、用途限制、商业使用限制、分发限制）。
+
+特此授权，免费授予任何获得本软件及相关文档文件（以下统称"软件"）副本的自然人、法人或
+其他组织不受限制地处置本软件的权利，包括但不限于使用、复制、修改、合并、出版、分发、
+再许可和/或出售本软件副本，以及允许具备软件接收者行使上述权利，但须满足以下条件：
+
+1. 上述版权声明与本条许可声明，必须包含在软件的所有副本或主要部分之中。
+
+2. 【唯一限制】水印保留条款
+   本软件内置的水印及防篡改机制必须保持完整、可运行，且不得被移除、禁用、绕过或使其失效。
+   任何修改、二次开发、集成或分发行为，均须保留上述水印机制，不得通过任何方式（包括但不限于
+   注释、打补丁、替换构建产物）消除或修改其展示效果与校验逻辑。
+   除本条第 2 款规定的水印保留义务之外，软件作者不主张任何其他权利限制。
+
+本软件按"原样"（AS IS）提供，不提供任何明示或暗示的担保，包括但不限于对适销性、
+特定用途适用性及非侵权性的担保。在任何情况下，无论因任何理论（合同、侵权或其他），
+作者或版权持有人均不对因使用或无法使用本软件而产生的任何直接、间接、偶发、特殊或
+后果性损害（包括但不限于替代商品或服务的采购、使用中断、数据或利润损失）承担责任。
+
+----------------------------------------------------------------------------
+WebSheet Open Source License (English Summary)
+Copyright © 2026 WebSheet ZhangXinPan
+mail：1627685@qq.com
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this
+software and associated documentation files (the "Software"), to deal in the Software
+without restriction, including without limitation the rights to use, copy, modify, merge,
+publish, distribute, sublicense, and/or sell copies of the Software, subject to the
+following conditions:
+
+1. The above copyright notice and this permission notice shall be included in all copies
+   or substantial portions of the Software.
+
+2. [Sole restriction] Watermark retention. The built-in watermark and anti-tamper
+   mechanism  MUST remain intact and functional.
+   It must not be removed, disabled, bypassed, or rendered ineffective by any means.
+   Except for this watermark-retention obligation, the authors impose NO other restriction
+   (no domain lock, no usage limit, no commercial-use limit, no redistribution limit).
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
+PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE
+FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+DEALINGS IN THE SOFTWARE.
+============================================================================

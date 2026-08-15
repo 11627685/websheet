@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <title>冻结区域裁剪测试</title>
+    <link rel="stylesheet" href="./dist/style.css">
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            color: #263238;
+        }
+
+        #toolbar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            padding: 10px 12px;
+            border-bottom: 1px solid #cfd8dc;
+            background: #f5f7f8;
+        }
+
+        #toolbar button {
+            padding: 6px 10px;
+            border: 1px solid #b0bec5;
+            border-radius: 4px;
+            background: #fff;
+            color: #263238;
+            cursor: pointer;
+        }
+
+        #toolbar button:hover {
+            background: #eceff1;
+        }
+
+        #status {
+            margin-left: auto;
+            color: #455a64;
+            font-size: 13px;
+        }
+
+        #yourElement {
+            width: 100%;
+            height: calc(100vh - 58px);
+        }
+    </style>
+</head>
+
+<body>
+    <div id="toolbar">
+        <button onclick="setMode('none')">无冻结</button>
+        <button onclick="setMode('col')">冻结列</button>
+        <button onclick="setMode('row')">冻结行</button>
+        <button onclick="setMode('both')">冻结行列</button>
+        <button onclick="moveHorizontal()">横向移动</button>
+        <button onclick="moveVertical()">纵向移动</button>
+        <button onclick="resetViewport()">重置视图</button>
+        <span id="status"></span>
+    </div>
+
+    <div id="yourElement"></div>
+
+    <script src="../dist/websheet.umd.js"></script>
+    <script>
+        const element = document.getElementById('yourElement');
+        const status = document.getElementById('status');
+        const wsheet = new websheet('HTML', element, 0, 0, 1100, 600);
+        const activeSheet = wsheet.ActiveSheet();
+        const sheetView = wsheet.workBook.getSheetView();
+
+        function makeFill(color) {
+            const fill = new websheet.Model.Fill();
+            fill.setColor(color);
+            return fill;
+        }
+
+        function getColumnName(index) {
+            let name = '';
+            let value = index + 1;
+            while (value > 0) {
+                const remainder = (value - 1) % 26;
+                name = String.fromCharCode(65 + remainder) + name;
+                value = Math.floor((value - 1) / 26);
+            }
+            return name;
+        }
+
+        function setValue(ref, value, color) {
+            activeSheet.SetCellValue(ref, value);
+            activeSheet.SetCellFill(ref, makeFill(color));
+        }
+
+        function prepareData() {
+            for (let row = 1; row <= 30; row++) {
+                for (let col = 1; col <= 18; col++) {
+                    const ref = getColumnName(col - 1) + row;
+                    activeSheet.SetCellValue(ref, ref);
+                }
+            }
+
+            // 同时覆盖冻结区、滚动区和跨冻结边界的合并区域。
+            setValue('A2', '冻结区合并 A2:B3', '#ffcc80');
+            activeSheet.AddoneMergeCell('A2:B3');
+
+            setValue('C2', '跨冻结行列合并 C2:E4', '#b3e5fc');
+            activeSheet.AddoneMergeCell('C2:E4');
+
+            setValue('D5', '滚动区合并 D5:F7', '#c5e1a5');
+            activeSheet.AddoneMergeCell('D5:F7');
+
+            setValue('B10', '跨冻结列合并 B10:F12', '#d1c4e9');
+            activeSheet.AddoneMergeCell('B10:F12');
+
+            setValue('H2', '跨冻结行合并 H2:I10', '#f8bbd0');
+            activeSheet.AddoneMergeCell('H2:I10');
+
+            for (let col = 1; col <= 18; col++) {
+                activeSheet.setColWidth(col, 92);
+            }
+        }
+
+        function rebuild(label) {
+            wsheet.BuildSheet();
+            wsheet.Draw();
+            status.textContent = label;
+        }
+
+        function setMode(mode) {
+            activeSheet.sheetView.pane = null;
+
+            if (mode === 'col') {
+                activeSheet.SetFreezeCol(3);
+            } else if (mode === 'row') {
+                activeSheet.SetFreezeRow(3);
+            } else if (mode === 'both') {
+                activeSheet.SetFreeze('C3');
+            }
+
+            rebuild('当前模式: ' + mode);
+        }
+
+        function moveHorizontal() {
+            if (!activeSheet.sheetView.pane) {
+                activeSheet.SetFreeze('C3');
+            }
+            activeSheet.sheetView.pane.setStarCol(5);
+            rebuild('当前模式: 行列冻结，已向右移动一列到 E 列');
+        }
+
+        function moveVertical() {
+            if (!activeSheet.sheetView.pane) {
+                activeSheet.SetFreeze('C3');
+            }
+            activeSheet.sheetView.pane.setStartRow(10);
+            rebuild('当前模式: 行列冻结，已纵向移动到第 10 行');
+        }
+
+        function resetViewport() {
+            if (activeSheet.sheetView.pane) {
+                activeSheet.sheetView.pane.setStarCol(4);
+                activeSheet.sheetView.pane.setStartRow(4);
+            }
+            rebuild('当前模式: 行列冻结，已重置滚动位置');
+        }
+
+        prepareData();
+        setMode('both');
+
+        window.freezeClipTest = {
+            setMode,
+            moveHorizontal,
+            moveVertical,
+            resetViewport
+        };
+    </script>
+</body>
+
+</html>

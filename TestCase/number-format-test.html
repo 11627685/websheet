@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>NumberFormatCommand 数字格式 撤销/重做测试</title>
+    <script src="../dist/websheet.umd.js"></script>
+    <link rel="stylesheet" href="../dist/style.css">
+    <style>
+        body { margin: 0; font-family: Arial, sans-serif; }
+        #header {
+            padding: 10px 20px;
+            background: #f5f5f5;
+            border-bottom: 1px solid #ddd;
+        }
+        #header h1 { margin: 0 0 6px 0; font-size: 16px; }
+        #info {
+            font-size: 12px; color: #666;
+            padding: 4px 8px; background: #fff; border-radius: 4px;
+            display: inline-block;
+        }
+        #container {
+            width: 100%;
+            height: 500px;
+        }
+        #logPanel {
+            height: 260px;
+            overflow-y: auto;
+            background: #1e1e1e;
+            color: #d4d4d4;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            padding: 8px 12px;
+        }
+        .log-entry { margin: 2px 0; }
+        .log-action { color: #569cd6; }
+        .log-undo { color: #ce9178; }
+        .log-redo { color: #b5cea8; }
+        .log-info { color: #6a9955; }
+        .log-error { color: #f44747; }
+        .log-pass { color: #4ec9b0; font-weight: bold; }
+        .log-fail { color: #f44747; font-weight: bold; }
+        #testButtons {
+            padding: 8px 20px;
+            background: #fafafa;
+            border-bottom: 1px solid #ddd;
+        }
+        #testButtons button {
+            margin-right: 8px;
+            padding: 4px 12px;
+            font-size: 12px;
+            cursor: pointer;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            background: #fff;
+        }
+        #testButtons button:hover { background: #e8f0fe; }
+    </style>
+</head>
+<body>
+    <div id="header">
+        <h1>NumberFormatCommand 数字格式 撤销/重做测试</h1>
+        <span id="info">测试数字格式 Command 模式：14种格式 → 撤销 → 重做 → 快照不污染 → redo栈清空</span>
+    </div>
+    <div id="testButtons">
+        <button onclick="runNumberFormatTestSequence()">数字格式测试序列</button>
+        <button onclick="checkState()">检查当前状态</button>
+        <button onclick="clearLog()">清空日志</button>
+        <span style="font-size:12px;color:#666;margin-left:12px;">
+            手动测试：选中单元格 → 工具栏"123"按钮 → 选格式看预览 → 确认 → Ctrl+Z 撤销 → Ctrl+Y 重做
+        </span>
+    </div>
+    <div id="container"></div>
+    <div id="logPanel"></div>
+
+    <script>
+        var logPanel = document.getElementById('logPanel');
+
+        function log(type, msg) {
+            var entry = document.createElement('div');
+            entry.className = 'log-entry log-' + type;
+            var time = new Date().toLocaleTimeString();
+            entry.textContent = '[' + time + '] ' + msg;
+            logPanel.appendChild(entry);
+            logPanel.scrollTop = logPanel.scrollHeight;
+        }
+
+        function clearLog() { logPanel.innerHTML = ''; }
+
+        // 初始化 WebSheet
+        websheet.ShowToolbar = true;
+        var container = document.getElementById('container');
+        var ws = new websheet('testId', container);
+
+        var wbView = ws.getWorkBookView();
+        var sheetView = wbView.getSheetView();
+        var activeSheet = ws.ActiveSheet();
+
+        // 填入测试数据（数字值用 number 类型，符合真实场景）
+        var testData = [
+            ['A1', 12345.6789],    // 数字格式测试
+            ['A2', 0.85],          // 百分比测试
+            ['A3', 45678],         // 日期序列值
+            ['B1', 1000000],       // 千位分隔
+            ['B2', 3.14159],       // 科学计数
+            ['B3', 'Hello'],       // 文本（仅用于文本格式 @ 测试）
+        ];
+
+        testData.forEach(function(item) {
+            var cell = new websheet.Model.Cell();
+            cell.r = item[0];
+            cell.v = item[1];
+            cell.s = 0;
+            activeSheet.SetCellValue(item[0], cell);
+        });
+
+        ws.BuildSheet();
+        ws.Draw();
+
+        log('info', 'WebSheet 初始化完成，测试数据已填入 A1:B3');
+        log('info', 'Undo栈长度: ' + wbView.unDoRedo.GetUndoLength());
+
+        // === 辅助函数 ===
+
+        // 获取单元格 numFmt 信息
+        function getCellFormat(addr) {
+            var cell = activeSheet.GetCellByRef(addr);
+            var style = activeSheet.GetCellStyleByCell(cell);
+            var nf = style.numFmt;
+            return {
+                formatCode: nf.formatCode,
+                numFmtId: nf.numFmtId,
+                fromatType: nf.fromatType
+            };
+        }
+
+        function getFmtCode(addr) { return getCellFormat(addr).formatCode; }
+        function getFmtId(addr) { return getCellFormat(addr).numFmtId; }
+        function getFmtType(addr) { return getCellFormat(addr).fromatType; }
+
+        function doUndo() {
+            wbView.unDoRedo.Undo();
+            ws.BuildSheet(); ws.Draw();
+        }
+
+        function doRedo() {
+            wbView.unDoRedo.Redo();
+            ws.BuildSheet(); ws.Draw();
+        }
+
+        function doSetFormat(range, formatCode) {
+            sheetView.setActiveRange(range);
+            sheetView.SetCellNumberFormat(formatCode);
+            ws.BuildSheet(); ws.Draw();
+        }
+
+        // 初始状态 formatCode 可能是 '' 或 'General'（取决于 Xf.applyNumberFormat）
+        function isInitialFormat(code) { return code === 'General' || code === ''; }
+
+        function assert(condition, msg) {
+            if (condition) {
+                log('pass', '  PASS ' + msg);
+            } else {
+                log('fail', '  FAIL ' + msg);
+            }
+        }
+
+        function checkState() {
+            log('info', '=== 当前状态 ===');
+            log('info', 'Undo栈=' + wbView.unDoRedo.GetUndoLength() +
+                ' Redo栈=' + wbView.unDoRedo.GetRedoLengt());
+            var addrs = ['A1','A2','A3','B1','B2','B3'];
+            addrs.forEach(function(addr) {
+                var fmt = getCellFormat(addr);
+                log('info', '  ' + addr + ' code=' + fmt.formatCode +
+                    ' id=' + fmt.numFmtId + ' type=' + fmt.fromatType);
+            });
+        }
+
+        // === 自动测试序列 ===
+
+        function runNumberFormatTestSequence() {
+            clearLog();
+            log('action', '====== 开始数字格式自动测试序列 ======');
+
+            // --- 测试 1：初始状态 ---
+            log('action', '测试 1: 初始状态检查（A1 应为 General / id=0 / N）');
+            assert(isInitialFormat(getFmtCode('A1')), 'A1 formatCode 应为 General 或空, 实际=' + getFmtCode('A1'));
+            assert(getFmtId('A1') === 0, 'A1 numFmtId 应为 0, 实际=' + getFmtId('A1'));
+            assert(getFmtType('A1') === 'N' || getFmtType('A1') === '', 'A1 fromatType 应为 N 或空, 实际=' + getFmtType('A1'));
+            assert(wbView.unDoRedo.GetUndoLength() === 0, 'Undo栈应为 0, 实际=' + wbView.unDoRedo.GetUndoLength());
+
+            // --- 测试 2：设置整数格式 ---
+            log('action', '测试 2: A1 设置整数格式 (0)');
+            doSetFormat('A1', '0');
+            log('info', '>>> 请目视确认 A1 显示为 12346');
+            assert(getFmtCode('A1') === '0', 'A1 formatCode 应为 0, 实际=' + getFmtCode('A1'));
+            assert(getFmtId('A1') === 1, 'A1 numFmtId 应为 1, 实际=' + getFmtId('A1'));
+            assert(wbView.unDoRedo.GetUndoLength() === 1, 'Undo栈应为 1, 实际=' + wbView.unDoRedo.GetUndoLength());
+
+            // --- 测试 3：设置两位小数 ---
+            log('action', '测试 3: A1 设置两位小数 (0.00)');
+            doSetFormat('A1', '0.00');
+            log('info', '>>> 请目视确认 A1 显示为 12345.68');
+            assert(getFmtCode('A1') === '0.00', 'A1 formatCode 应为 0.00, 实际=' + getFmtCode('A1'));
+            assert(getFmtId('A1') === 2, 'A1 numFmtId 应为 2, 实际=' + getFmtId('A1'));
+            assert(wbView.unDoRedo.GetUndoLength() === 2, 'Undo栈应为 2, 实际=' + wbView.unDoRedo.GetUndoLength());
+
+            // --- 测试 4：撤销 → 恢复整数 ---
+            log('undo', '测试 4: 撤销（A1 应恢复为 0 / id=1）');
+            doUndo();
+            assert(getFmtCode('A1') === '0', 'A1 应恢复 0, 实际=' + getFmtCode('A1'));
+            assert(getFmtId('A1') === 1, 'A1 应恢复 id=1, 实际=' + getFmtId('A1'));
+            assert(wbView.unDoRedo.GetUndoLength() === 1, 'Undo栈应为 1, 实际=' + wbView.unDoRedo.GetUndoLength());
+            assert(wbView.unDoRedo.GetRedoLengt() === 1, 'Redo栈应为 1, 实际=' + wbView.unDoRedo.GetRedoLengt());
+
+            // --- 测试 5：撤销 → 恢复常规 ---
+            log('undo', '测试 5: 再次撤销（A1 应恢复为 General / id=0）');
+            doUndo();
+            assert(isInitialFormat(getFmtCode('A1')), 'A1 应恢复 General 或空, 实际=' + getFmtCode('A1'));
+            assert(getFmtId('A1') === 0, 'A1 应恢复 id=0, 实际=' + getFmtId('A1'));
+            assert(wbView.unDoRedo.GetUndoLength() === 0, 'Undo栈应为 0, 实际=' + wbView.unDoRedo.GetUndoLength());
+            assert(wbView.unDoRedo.GetRedoLengt() === 2, 'Redo栈应为 2, 实际=' + wbView.unDoRedo.GetRedoLengt());
+
+            // --- 测试 6：重做 → 恢复整数 ---
+            log('redo', '测试 6: 重做（A1 应恢复为 0 / id=1）');
+            doRedo();
+            assert(getFmtCode('A1') === '0', 'A1 应恢复 0, 实际=' + getFmtCode('A1'));
+            assert(getFmtId('A1') === 1, 'A1 应恢复 id=1, 实际=' + getFmtId('A1'));
+            assert(wbView.unDoRedo.GetUndoLength() === 1, 'Undo栈应为 1, 实际=' + wbView.unDoRedo.GetUndoLength());
+
+            // --- 测试 7：重做 → 恢复两位小数 ---
+            log('redo', '测试 7: 再次重做（A1 应恢复为 0.00 / id=2）');
+            doRedo();
+            assert(getFmtCode('A1') === '0.00', 'A1 应恢复 0.00, 实际=' + getFmtCode('A1'));
+            assert(getFmtId('A1') === 2, 'A1 应恢复 id=2, 实际=' + getFmtId('A1'));
+            assert(wbView.unDoRedo.GetUndoLength() === 2, 'Undo栈应为 2, 实际=' + wbView.unDoRedo.GetUndoLength());
+            assert(wbView.unDoRedo.GetRedoLengt() === 0, 'Redo栈应为 0, 实际=' + wbView.unDoRedo.GetRedoLengt());
+
+            // --- 测试 8：快照不污染（核心！undo→redo→undo）---
+            log('action', '测试 8: 快照不污染 — 设 0% → undo → redo → undo → 应仍是 0.00');
+            doSetFormat('A1', '0%');           // 设百分比
+            assert(getFmtCode('A1') === '0%', '设 0% 后 formatCode 应为 0%, 实际=' + getFmtCode('A1'));
+            doUndo();                          // undo → 0.00
+            assert(getFmtCode('A1') === '0.00', 'undo 后应恢复 0.00, 实际=' + getFmtCode('A1'));
+            doRedo();                          // redo → 0%
+            assert(getFmtCode('A1') === '0%', 'redo 后应恢复 0%, 实际=' + getFmtCode('A1'));
+            doUndo();                          // undo → 0.00
+            assert(getFmtCode('A1') === '0.00', '再次 undo 应仍是 0.00（快照未被污染）, 实际=' + getFmtCode('A1'));
+            assert(getFmtId('A1') === 2, 'id 应仍是 2, 实际=' + getFmtId('A1'));
+
+            // --- 测试 9：redo 栈清空 ---
+            log('action', '测试 9: redo 栈清空 — 设新格式 0.00% 后 Redo 栈应为 0');
+            doSetFormat('A1', '0.00%');
+            assert(getFmtCode('A1') === '0.00%', 'A1 应为 0.00%, 实际=' + getFmtCode('A1'));
+            assert(wbView.unDoRedo.GetRedoLengt() === 0, 'Redo栈应清空为 0, 实际=' + wbView.unDoRedo.GetRedoLengt());
+            assert(wbView.unDoRedo.GetUndoLength() === 3, 'Undo栈应为 3, 实际=' + wbView.unDoRedo.GetUndoLength());
+
+            // --- 测试 10：多区域独立 ---
+            log('action', '测试 10: 多区域独立 — B1 设 #,##0，A1 应保持 0.00%');
+            doSetFormat('B1', '#,##0');
+            log('info', '>>> 请目视确认 B1 显示为 1,000,000');
+            assert(getFmtCode('B1') === '#,##0', 'B1 应为 #,##0, 实际=' + getFmtCode('B1'));
+            assert(getFmtId('B1') === 3, 'B1 numFmtId 应为 3, 实际=' + getFmtId('B1'));
+            assert(getFmtCode('A1') === '0.00%', 'A1 应保持 0.00% 不受影响, 实际=' + getFmtCode('A1'));
+
+            // --- 测试 11：撤销多区域 ---
+            log('undo', '测试 11: 撤销 B1（B1 应恢复 General，A1 不变）');
+            doUndo();
+            assert(isInitialFormat(getFmtCode('B1')), 'B1 应恢复初始格式, 实际=' + getFmtCode('B1'));
+            assert(getFmtCode('A1') === '0.00%', 'A1 应保持 0.00% 不变, 实际=' + getFmtCode('A1'));
+
+            // --- 测试 12：范围设置 ---
+            log('action', '测试 12: 范围设置 A1:A2 设 #,##0.00');
+            doSetFormat('A1:A2', '#,##0.00');
+            assert(getFmtCode('A1') === '#,##0.00', 'A1 应为 #,##0.00, 实际=' + getFmtCode('A1'));
+            assert(getFmtCode('A2') === '#,##0.00', 'A2 应为 #,##0.00, 实际=' + getFmtCode('A2'));
+            assert(getFmtId('A1') === 4, 'A1 numFmtId 应为 4, 实际=' + getFmtId('A1'));
+
+            // --- 测试 13：撤销范围 ---
+            log('undo', '测试 13: 撤销范围（A1:A2 都应恢复）');
+            doUndo();
+            assert(getFmtCode('A1') === '0.00%', 'A1 应恢复 0.00%, 实际=' + getFmtCode('A1'));
+            assert(isInitialFormat(getFmtCode('A2')), 'A2 应恢复初始格式, 实际=' + getFmtCode('A2'));
+
+            // --- 测试 14：文本格式 ---
+            log('action', '测试 14: B3 设置文本格式 (@)');
+            doSetFormat('B3', '@');
+            assert(getFmtCode('B3') === '@', 'B3 formatCode 应为 @, 实际=' + getFmtCode('B3'));
+            assert(getFmtId('B3') === 49, 'B3 numFmtId 应为 49, 实际=' + getFmtId('B3'));
+            assert(getFmtType('B3') === 'N', 'B3 fromatType 应为 N, 实际=' + getFmtType('B3'));
+
+            // --- 测试 15：短日期格式 ---
+            log('action', '测试 15: A3 设置短日期 (yyyy/M/d)');
+            doSetFormat('A3', 'yyyy/M/d');
+            log('info', '>>> 请目视确认 A3 显示为日期');
+            assert(getFmtCode('A3') === 'yyyy/M/d', 'A3 formatCode 应为 yyyy/M/d, 实际=' + getFmtCode('A3'));
+            assert(getFmtId('A3') === 14, 'A3 numFmtId 应为 14, 实际=' + getFmtId('A3'));
+            assert(getFmtType('A3') === 'D', 'A3 fromatType 应为 D, 实际=' + getFmtType('A3'));
+
+            // --- 测试 16：长日期格式 ---
+            log('action', '测试 16: A3 设置长日期 (yyyy年m月d日)');
+            doSetFormat('A3', 'yyyy年m月d日');
+            assert(getFmtCode('A3') === 'yyyy年m月d日', 'A3 formatCode 应为 yyyy年m月d日, 实际=' + getFmtCode('A3'));
+            assert(getFmtId('A3') === 31, 'A3 numFmtId 应为 31, 实际=' + getFmtId('A3'));
+            assert(getFmtType('A3') === 'D', 'A3 fromatType 应为 D, 实际=' + getFmtType('A3'));
+
+            // --- 测试 17：恢复常规 ---
+            log('action', '测试 17: A3 恢复常规格式 (General)');
+            doSetFormat('A3', 'General');
+            assert(getFmtCode('A3') === 'General', 'A3 应为 General, 实际=' + getFmtCode('A3'));
+            assert(getFmtId('A3') === 0, 'A3 numFmtId 应为 0, 实际=' + getFmtId('A3'));
+            assert(getFmtType('A3') === 'N', 'A3 fromatType 应为 N, 实际=' + getFmtType('A3'));
+
+            // --- 测试 18：覆盖后撤销恢复 ---
+            log('action', '测试 18: 覆盖后撤销恢复 — B1 设 0 再设 0.00 → undo 恢复 0 → undo 恢复之前');
+            var b1Before = getFmtCode('B1');  // 记住覆盖前状态
+            doSetFormat('B1', '0');
+            assert(getFmtCode('B1') === '0', 'B1 设 0 后应为 0, 实际=' + getFmtCode('B1'));
+            doSetFormat('B1', '0.00');
+            assert(getFmtCode('B1') === '0.00', 'B1 设 0.00 后应为 0.00, 实际=' + getFmtCode('B1'));
+            doUndo();
+            assert(getFmtCode('B1') === '0', 'undo 应恢复 0, 实际=' + getFmtCode('B1'));
+            doUndo();
+            assert(getFmtCode('B1') === b1Before, '再次 undo 应恢复覆盖前状态 (' + b1Before + '), 实际=' + getFmtCode('B1'));
+
+            // --- 测试 19：复杂历史穿越 ---
+            log('action', '测试 19: 复杂历史穿越 — 连续 undo 到底再 redo 回来');
+            var undoCount = wbView.unDoRedo.GetUndoLength();
+            log('info', '当前 Undo栈=' + undoCount + '，连续 undo 到底');
+            for (var i = 0; i < undoCount; i++) {
+                doUndo();
+            }
+            assert(wbView.unDoRedo.GetUndoLength() === 0, 'undo 到底后 Undo栈应为 0, 实际=' + wbView.unDoRedo.GetUndoLength());
+            assert(isInitialFormat(getFmtCode('A1')), 'A1 应回到初始格式, 实际=' + getFmtCode('A1'));
+            assert(isInitialFormat(getFmtCode('A2')), 'A2 应回到初始格式, 实际=' + getFmtCode('A2'));
+            assert(isInitialFormat(getFmtCode('A3')), 'A3 应回到初始格式, 实际=' + getFmtCode('A3'));
+            assert(isInitialFormat(getFmtCode('B1')), 'B1 应回到初始格式, 实际=' + getFmtCode('B1'));
+            assert(isInitialFormat(getFmtCode('B3')), 'B3 应回到初始格式, 实际=' + getFmtCode('B3'));
+            // redo 回来
+            var redoCount = wbView.unDoRedo.GetRedoLengt();
+            log('info', 'Redo栈=' + redoCount + '，连续 redo 回来');
+            for (var j = 0; j < redoCount; j++) {
+                doRedo();
+            }
+            assert(wbView.unDoRedo.GetRedoLengt() === 0, 'redo 回来后 Redo栈应为 0, 实际=' + wbView.unDoRedo.GetRedoLengt());
+
+            // --- 测试 20：科学计数 + 最终状态 ---
+            log('action', '测试 20: B2 设置科学计数 (0.00E+00)');
+            doSetFormat('B2', '0.00E+00');
+            log('info', '>>> 请目视确认 B2 显示为 3.14E+00');
+            assert(getFmtCode('B2') === '0.00E+00', 'B2 应为 0.00E+00, 实际=' + getFmtCode('B2'));
+            assert(getFmtId('B2') === 11, 'B2 numFmtId 应为 11, 实际=' + getFmtId('B2'));
+
+            log('action', '====== 数字格式测试序列结束 ======');
+            log('info', '最终状态: Undo栈=' + wbView.unDoRedo.GetUndoLength() +
+                ' Redo栈=' + wbView.unDoRedo.GetRedoLengt());
+            log('info', '提示：如所有 PASS 且目视效果正确，则数字格式功能正常');
+        }
+    </script>
+</body>
+</html>

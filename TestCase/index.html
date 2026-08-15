@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>webSheet</title>
+<head>
+    <style>
+        /* 样式部分保持不变，但进行了整理和优化 */
+        .container {
+            display: flex;
+            height: 100vh;
+            background: #f5f6fa;
+        }
+
+        #contentFrame {
+            flex: 1;
+            border: none;
+            background: white;
+            box-shadow: -2px 0 5px rgba(0, 0, 0, 0.1);
+        }
+
+        ul {
+            list-style-type: none;
+            /* 去除所有列表标记 */
+            padding-left: 0;
+            /* 清除默认缩进 */
+        }
+
+        /* 基础重置 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        /* 导航容器 */
+        .nav-container {
+            width: 200px;
+            background: #2c3e50;
+            font-family: 'Segoe UI', sans-serif;
+            height: 100vh;
+        }
+
+        /* 菜单项样式 */
+        .menu-item {
+            position: relative;
+            border-bottom: 1px solid #34495e;
+        }
+
+        .menu-link {
+            display: block;
+            color: #ecf0f1;
+            padding: 12px 20px;
+            text-decoration: none;
+            transition: background 0.3s;
+        }
+
+        /* 二级菜单 */
+        .sub-menu {
+            display: none;
+            background: #34495e;
+            padding-left: 15px;
+        }
+
+        
+        /* 交互效果 */
+        .menu-link:hover,
+        .sub-menu .menu-link:hover {
+            background: #3498db;
+        }
+
+        /* 选中的菜单项样式 */
+        .menu-link.selected {
+            background: #2ecc71;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="nav">
+            <nav class="nav-container">
+                <ul>
+                    <li class="menu-item has-children">
+                        <a href="index.html" class="menu-link">单元格</a>
+                        <ul class="sub-menu">
+                            <li class="menu-item"><a href="base.html" class="menu-link">基础</a></li>
+                            <li class="menu-item"><a href="font.html" class="menu-link">字体</a></li>
+                            <li class="menu-item"><a href="border.html" class="menu-link">格边框</a></li>
+                            <li class="menu-item"><a href="fill.html" class="menu-link">单元格背景</a></li>
+                            <li class="menu-item"><a href="alignment.html" class="menu-link">对齐</a></li>
+                        </ul>
+                    </li>
+                    <li class="menu-item has-children">
+                        <a href="index.html" class="menu-link">格式化</a>
+                        <ul class="sub-menu">
+                            <li class="menu-item"><a href="fromat-n.html" class="menu-link">金额格式化</a></li>
+                            <li class="menu-item"><a href="format-d.html" class="menu-link">日期时间格式化</a></li>
+                        </ul>
+                    </li>
+
+                    <li class="menu-item has-children">
+                        <a href="index.html" class="menu-link">列和行</a>
+                        <ul class="sub-menu">
+                            <li class="menu-item"><a href="rowHeight.html" class="menu-link">行高度</a></li>
+                            <li class="menu-item"><a href="newRow.html" class="menu-link">插入行</a></li>
+                            <li class="menu-item"><a href="delRow.html" class="menu-link">删除行</a></li>
+                            <li class="menu-item"><a href="ColWith.html" class="menu-link">列宽度</a></li>
+                            <li class="menu-item"><a href="newCol.html" class="menu-link">插入列</a></li>
+                            <li class="menu-item"><a href="delCol.html" class="menu-link">删除列</a></li>
+                        </ul>
+                    </li>
+
+                    <li class="menu-item has-children">
+                        <a href="index.html" class="menu-link">table表格</a>
+                        <ul class="sub-menu">
+                            <li class="menu-item"><a href="tableBase.html" class="menu-link">基础表格</a></li>
+                            <li class="menu-item"><a href="tableBase2.html" class="menu-link">表格数据源样式</a></li>
+                             
+                        </ul>
+                    </li>
+
+
+                    <li class="menu-item has-children">
+                        <a href="index.html" class="menu-link">编辑器</a>
+                        <ul class="sub-menu">
+                            <li class="menu-item"><a href="select.html" class="menu-link">下拉选择</a></li>
+                            <li class="menu-item"><a href="datatime.html" class="menu-link">日期时间编辑器</a></li>
+                            <li class="menu-item"><a href="progress.html" class="menu-link">进度条</a></li>
+                        </ul>
+                    </li>
+
+                    <li class="menu-item">
+                        <a href="loadFile.html" class="menu-link">加载文件</a>
+                    </li>
+
+                    <li class="menu-item">
+                        <a href="viewFreeze.html" class="menu-link">视图锁定</a>
+                    </li>
+
+                    <li class="menu-item">
+                        <a href="sheet.html" class="menu-link">sheet操作</a>
+                    </li>
+                    <li class="menu-item">
+                        <a href="event.html" class="menu-link">事件绑定</a>
+                    </li>
+
+                    <li class="menu-item">
+                        <a href="udf.html" class="menu-link"> 自定义函数</a>
+                    </li>
+
+
+                    <li class="menu-item">
+                        <a href="userControl.html" class="menu-link"> 自定义控件</a>
+                    </li>
+
+                    <li class="menu-item">
+                        <a href="rightMenu.html" class="menu-link"> 右击菜单</a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+        <iframe id="contentFrame" src="loadFile.html"></iframe>
+    </div>
+    <script>
+
+        // 获取页面的查询字符串
+        const queryString = window.location.search;
+
+        // 解析查询字符串为对象
+        const urlParams = new URLSearchParams(queryString);
+
+        // 获取指定参数的值，例如 'page' 参数
+        const page = urlParams.get('page');
+
+        // 获取 iframe 元素
+        const contentFrame = document.getElementById('contentFrame');
+
+        if (page) {
+            // 如果存在 'page' 参数，设置 iframe 的 src 属性
+            contentFrame.src = page;
+        } else {
+            // 如果没有 'page' 参数，使用默认的 src
+            console.log('未提供 page 参数，使用默认 src');
+        }
+        
+        // 获取所有一级菜单
+        const mainMenuItems = document.querySelectorAll('.menu-item.has-children > a');
+        // 获取所有二级菜单的链接
+        const subMenuLinks = document.querySelectorAll('.sub-menu a');
+        const frame = document.getElementById('contentFrame');
+
+          // 获取所有一级菜单直接展示
+          const mainMenuItemsD = document.querySelectorAll('.menu-item > a');
+
+
+          // 为每个二级菜单链接添加点击事件监听器
+          mainMenuItemsD.forEach(link => {
+            link.addEventListener('click', function (e) {
+                // 移除所有链接的选中样式
+
+                mainMenuItemsD.forEach(l => l.classList.remove('selected'));
+               
+
+                subMenuLinks.forEach(l => l.classList.remove('selected'));
+                  // 为当前点击的链接添加选中样式
+                  this.classList.add('selected');
+                console.log(this.href);
+                if (this.href.indexOf('index.html') > 0) {
+                    e.preventDefault(); // 阻止跳转
+                    return;
+                }
+                if (this.href !== undefined) {
+                    frame.src = this.href;
+                }
+                e.preventDefault(); // 阻止跳转
+            });
+        });
+
+
+        // 为每个一级菜单添加点击事件监听器
+        mainMenuItems.forEach(item => {
+            item.addEventListener('click', function (e) {
+                e.preventDefault();
+                const subMenu = this.nextElementSibling;
+                // 切换二级菜单的显示状态
+                subMenu.style.display = subMenu.style.display === 'block'? 'none' : 'block';
+            });
+        });
+
+        // 为每个二级菜单链接添加点击事件监听器
+        subMenuLinks.forEach(link => {
+            link.addEventListener('click', function (e) {
+                mainMenuItemsD.forEach(l => l.classList.remove('selected'));
+
+                // 移除所有链接的选中样式
+                subMenuLinks.forEach(l => l.classList.remove('selected'));
+                // 为当前点击的链接添加选中样式
+                this.classList.add('selected');
+
+                if (this.href.indexOf('index.html') > 0) {
+                    e.preventDefault(); // 阻止跳转
+                    return;
+                }
+                if (this.href !== undefined) {
+                    frame.src = this.href;
+                }
+                e.preventDefault(); // 阻止跳转
+            });
+        });
+    </script>
+</body>
+
+</html>

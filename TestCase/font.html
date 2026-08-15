@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>websheet Demo</title>
+
+  <style>
+    .hljs-ln-numbers {
+      text-align: right;
+      color: #7d7d7d;
+      padding-right: 15px;
+      border-right: 1px solid #555;
+    }
+
+    .code-container {
+      position: relative;
+    }
+
+    .copy-btn {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      padding: 4px 8px;
+      background: #f0f0f0;
+      border: 1px solid #ccc;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+
+    .copy-btn:hover {
+      background: #e0e0e0;
+    }
+  </style>
+  <link href="./dist/monokai-sublime.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="./dist/style.css">
+</head>
+
+<body>
+  <div id='yourElement'>
+  </div>
+
+  <div class="code-container">
+    <button class="copy-btn">复制</button>
+
+
+
+    <pre><code class="language-javascript"  >
+  let yourElement = document.getElementById("yourElement");
+ let wsheet = new websheet('HTML', yourElement, 0, 0, document.documentElement.clientWidth * 0.99, document.documentElement.clientHeight*0.6);
+
+  /**
+  * 第一步 获取激活的sheet
+  */
+  let activeSheet = wsheet.ActiveSheet();
+  activeSheet.SetCellValue('A1','默认字体');
+  activeSheet.SetCellValue('A2','展示字体');
+  activeSheet.SetCellValue('A3','对标字体');
+  activeSheet.SetCellValue('A4','展示字体');
+  activeSheet.SetCellValue('A5','对标字体');
+  activeSheet.SetCellValue('B1','宋体');
+  activeSheet.SetCellValue('B2','雅黑');
+  activeSheet.SetCellValue('B3','雅黑');
+  activeSheet.SetCellValue('B4','隶书');
+  activeSheet.SetCellValue('B5','隶书');
+  activeSheet.SetCellValue('C1','宋体');
+  activeSheet.SetCellValue('C2','雅黑');
+  activeSheet.SetCellValue('C3','雅黑');
+  activeSheet.SetCellValue('C4','隶书');
+  activeSheet.SetCellValue('C5','隶书');
+
+  activeSheet.SetCellValue('D5',123123);
+
+  activeSheet.SetCellValue(4,4,'4行4列');
+  
+
+  /**
+  * 第二步   申明Font字体对象 （字体对象必须在系统内安装且被浏览器识别）
+  */
+
+  /**
+   * 雅黑，粉色
+   */
+  let newFontYH = new websheet.Model.Font();
+  newFontYH.name='雅黑';
+  newFontYH.sz=25;
+  //newFontK.color.rgb='#ff00ff';
+  activeSheet.SetCellFont('B2', newFontYH);
+
+  let newFontYHc = new websheet.Model.Font();
+  newFontYHc.name='雅黑';
+  newFontYHc.sz=25;
+  newFontYHc.color.rgb='#ff00ff';
+  activeSheet.SetCellFont(2,3, newFontYHc);
+
+
+   /**
+   * 隶书
+   */
+   let newFontls = new websheet.Model.Font();
+   newFontls.name='隶书';
+   newFontls.sz=25;
+  //newFontK.color.rgb='#ff00ff';
+  activeSheet.SetCellFont('B4', newFontls);
+
+  let newFontlsc = new websheet.Model.Font();
+  newFontlsc.name='隶书';
+  newFontlsc.sz=25;
+  newFontlsc.color.rgb='red';
+  activeSheet.SetCellFont('C4', newFontlsc);
+
+
+  let default25Size = new websheet.Model.Font();
+  default25Size.sz=25;
+  activeSheet.SetCellFont('B1', default25Size);
+  activeSheet.SetCellFont('C1', default25Size);
+ 
+  activeSheet.SetCellFont('B3', default25Size);
+  activeSheet.SetCellFont('C3', default25Size);
+
+  activeSheet.SetCellFont('B5', default25Size);
+  activeSheet.SetCellFont('C5', default25Size);
+
+
+  
+
+  //先忽略这里 这里设置行列的高度和宽度
+  activeSheet.setColWidth(1,160)
+  activeSheet.setColWidth(2,160)
+  activeSheet.setColWidth(3,160)
+  activeSheet.setColWidth(4,160)
+  activeSheet.setRowHeight(1,30);
+  activeSheet.setRowHeight(2,30);
+  activeSheet.setRowHeight(3,30);
+  activeSheet.setRowHeight(4,30);
+  activeSheet.setRowHeight(5,30);
+
+
+  /**
+   * 第三步   重新绘制表格
+   */
+
+  wsheet.BuildSheet();
+  wsheet.Draw();
+
+
+    </code></pre>
+  </div>
+
+  <script type="module">
+    //let yourElement=document.getElementById("yourElement");
+    // window.websheet.hashvalue='66b76806d3d089f20fc92217e3e116722a99c654f6538d9916b266c736ee2314';
+    // window.websheet.signList=[{domian:'localhost',company:'websheet',signvalue:'1C7dwqFVAEq504alFHIN6cRkeiJuob2cnMSYhJ9cB99dgCl1xqqrywYSkivqnpPue03ySREJbLB7+B5EyxLEBMNgidLCMCmM68jSFAcJQzFQekXjQvIPMCMHR9EB3U3E'},]
+
+
+    let yourElement = document.getElementById("yourElement");
+
+   let wsheet = new websheet('HTML', yourElement, 0, 0, document.documentElement.clientWidth * 0.99, document.documentElement.clientHeight*0.6);
+
+
+    /**
+      * 第一步 获取激活的sheet
+      */
+    let activeSheet = wsheet.ActiveSheet();
+    activeSheet.SetCellValue('A1', '默认字体');
+    activeSheet.SetCellValue('A2', '展示字体');
+    activeSheet.SetCellValue('A3', '对标字体');
+    activeSheet.SetCellValue('A4', '展示字体');
+    activeSheet.SetCellValue('A5', '对标字体');
+    activeSheet.SetCellValue('B1', '宋体');
+    activeSheet.SetCellValue('B2', '雅黑');
+    activeSheet.SetCellValue('B3', '雅黑');
+    activeSheet.SetCellValue('B4', '隶书');
+    activeSheet.SetCellValue('B5', '隶书');
+    activeSheet.SetCellValue('C1', '宋体');
+    activeSheet.SetCellValue('C2', '雅黑');
+    activeSheet.SetCellValue('C3', '雅黑');
+    activeSheet.SetCellValue('C4', '隶书');
+    activeSheet.SetCellValue('C5', '隶书');
+
+    activeSheet.SetCellValue('D5', 123123);
+
+    activeSheet.SetCellValue(4, 4, '4行4列');
+
+
+    /**
+    * 第二步   申明Font字体对象 （字体对象必须在系统内安装且被浏览器识别）
+    */
+
+    /**
+     * 雅黑，粉色
+     */
+    let newFontYH = new websheet.Model.Font();
+    newFontYH.name = '雅黑';
+    newFontYH.sz = 25;
+    //newFontK.color.rgb='#ff00ff';
+    activeSheet.SetCellFont('B2', newFontYH);
+
+    let newFontYHc = new websheet.Model.Font();
+    newFontYHc.name = '雅黑';
+    newFontYHc.sz = 25;
+    newFontYHc.color.rgb = '#ff00ff';
+    activeSheet.SetCellFont(2, 3, newFontYHc);
+
+
+    /**
+    * 隶书
+    */
+    let newFontls = new websheet.Model.Font();
+    newFontls.name = '隶书';
+    newFontls.sz = 25;
+    //newFontK.color.rgb='#ff00ff';
+    activeSheet.SetCellFont('B4', newFontls);
+
+    let newFontlsc = new websheet.Model.Font();
+    newFontlsc.name = '隶书';
+    newFontlsc.sz = 25;
+    newFontlsc.color.rgb = 'red';
+    activeSheet.SetCellFont('C4', newFontlsc);
+
+
+    let default25Size = new websheet.Model.Font();
+    default25Size.sz = 25;
+    activeSheet.SetCellFont('B1', default25Size);
+    activeSheet.SetCellFont('C1', default25Size);
+
+    activeSheet.SetCellFont('B3', default25Size);
+    activeSheet.SetCellFont('C3', default25Size);
+
+    activeSheet.SetCellFont('B5', default25Size);
+    activeSheet.SetCellFont('C5', default25Size);
+
+
+
+
+    //先忽略这里 这里设置行列的高度和宽度
+    activeSheet.setColWidth(1, 160)
+    activeSheet.setColWidth(2, 160)
+    activeSheet.setColWidth(3, 160)
+    activeSheet.setColWidth(4, 160)
+    activeSheet.setRowHeight(1, 30);
+    activeSheet.setRowHeight(2, 30);
+    activeSheet.setRowHeight(3, 30);
+    activeSheet.setRowHeight(4, 30);
+    activeSheet.setRowHeight(5, 30);
+
+
+    /**
+     * 第三步   重新绘制表格
+     */
+
+    wsheet.BuildSheet();
+    wsheet.Draw();
+
+
+
+  </script>
+
+
+ <script src="./dist/highlight.min.js"></script>
+  <script src="./dist/highlightjs-line-numbers.min.js"></script>
+
+  <script>
+
+    // 高亮代码并添加行号
+    document.addEventListener('DOMContentLoaded', () => {
+      hljs.highlightAll();
+      // 添加行号（支持 CSS 选择器）
+      hljs.initLineNumbersOnLoad();
+    });
+
+
+
+    document.querySelectorAll('.code-container').forEach(container => {
+      const btn = container.querySelector('.copy-btn');
+      const codeBlock = container.querySelector('code');
+
+      btn.addEventListener('click', () => {
+        // 现代浏览器 API（推荐）
+        if (navigator.clipboard) {
+          navigator.clipboard.writeText(codeBlock.textContent)
+            .then(() => {
+              btn.textContent = '已复制!';
+              setTimeout(() => btn.textContent = '复制', 1500);
+            });
+        }
+        // 兼容旧浏览器的降级方案
+        else {
+          const textarea = document.createElement('textarea');
+          textarea.value = codeBlock.textContent;
+          document.body.appendChild(textarea);
+          textarea.select();
+          document.execCommand('copy');
+          document.body.removeChild(textarea);
+          btn.textContent = '已复制!';
+          setTimeout(() => btn.textContent = '复制', 1500);
+        }
+      });
+    });
+
+  </script>
+   <script src="./dist/crypto-js.min.js"></script>
+   <script src="./dist/jsrsasign-all-min.js"></script>
+   <script type="text/javascript" src="./dist/xmlbuilder2.min.js"></script>
+   <script type="text/javascript" src="./dist/websheet.umd.js"></script>
+</body>
+
+</html>

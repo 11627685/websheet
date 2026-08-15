@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>WebSheet Inspection</title>
+  <script src="dist/websheet.umd.js"></script>
+</head>
+<body>
+  <div id="container"></div>
+  <script>
+    // The exact script the user wants to run
+    console.log('typeof websheet:', typeof websheet);
+    console.log('window.websheet === websheet:', window.websheet === websheet);
+    if (typeof websheet === 'object') {
+      console.log('Object.keys(websheet):', Object.keys(websheet));
+      console.log('typeof websheet.websheet:', typeof websheet.websheet);
+      if (typeof websheet.websheet === 'function') {
+        try {
+          const instance = new websheet.websheet('test-container', document.getElementById('container'), 0, 0, 100, 100);
+          console.log('Successfully created instance via websheet.websheet');
+        } catch (e) {
+          console.log('Error creating via websheet.websheet:', e.message);
+        }
+      }
+    }
+    document.title = 'done';
+  </script>
+</body>
+</html>

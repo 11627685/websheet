@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>打印功能测试 — WebSheet</title>
+  <script src="./dist/websheet.umd.js"></script>
+  <link rel="stylesheet" href="./dist/style.css">
+  <style>
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif;
+      color: #1f2937;
+      background: #f3f4f6;
+    }
+    #header {
+      padding: 12px 20px;
+      background: #fff;
+      border-bottom: 1px solid #d1d5db;
+    }
+    #header h1 { margin: 0 0 4px 0; font-size: 16px; }
+    #header .desc { font-size: 12px; color: #6b7280; }
+    #toolbar {
+      padding: 10px 20px;
+      background: #fafafa;
+      border-bottom: 1px solid #d1d5db;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    #toolbar button {
+      padding: 6px 14px;
+      font-size: 13px;
+      cursor: pointer;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      background: #fff;
+    }
+    #toolbar button:hover { background: #e8f0fe; }
+    #toolbar .primary {
+      background: #4a90d9;
+      color: #fff;
+      border-color: #4a90d9;
+    }
+    #toolbar .primary:hover { background: #357abd; }
+    #toolbar .hint { font-size: 12px; color: #6b7280; margin-left: 8px; }
+    #toolbar label { font-size: 12px; color: #374151; }
+    #toolbar select, #toolbar input[type="number"] {
+      padding: 4px 8px;
+      font-size: 12px;
+      border: 1px solid #ccc;
+      border-radius: 3px;
+    }
+    #container { width: 100%; height: 500px; background: #fff; }
+    #legend {
+      padding: 10px 20px;
+      font-size: 12px;
+      color: #4b5563;
+      background: #fff;
+      border-top: 1px solid #e5e7eb;
+    }
+    #legend span { display: inline-block; margin-right: 18px; }
+    #log {
+      height: 150px;
+      overflow-y: auto;
+      background: #1e1e1e;
+      color: #d4d4d4;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      padding: 8px 12px;
+    }
+    .log-info { color: #9cdcfe; }
+    .log-success { color: #4ec9b0; }
+    .log-error { color: #f44747; }
+    .log-warn { color: #dcdcaa; }
+  </style>
+</head>
+<body>
+  <div id="header">
+    <h1>打印功能测试</h1>
+    <div class="desc">测试 WebSheet 打印功能：字体渲染、单元格边框、合并单元格、页眉页脚</div>
+  </div>
+  <div id="toolbar">
+    <button class="primary" onclick="doPrint()">🖨️ 打印</button>
+    <button onclick="applyTestData()">填充测试数据</button>
+    <button onclick="clearAll()">清空内容</button>
+    <span class="hint">或选择 Excel 文件加载后打印:</span>
+    <input type="file" id="fileInput" accept=".xlsx" onchange="loadFile(event)">
+  </div>
+  <div id="toolbar">
+    <label>纸张大小:</label>
+    <select id="paperSize">
+      <option value="1">Letter (8.5x11)</option>
+      <option value="9" selected>A4 (210x297)</option>
+      <option value="5">Executive</option>
+      <option value="8">A3</option>
+    </select>
+    <label>方向:</label>
+    <select id="orientation">
+      <option value="portrait" selected>纵向</option>
+      <option value="landscape">横向</option>
+    </select>
+    <label>缩放:</label>
+    <input type="number" id="scale" value="100" min="10" max="400" step="10">%
+    <button onclick="applyPageSettings()">应用页面设置</button>
+  </div>
+  <div id="container"></div>
+  <div id="legend">
+    <span>测试内容: 字体、颜色、边框、合并、公式、日期、数字格式</span>
+  </div>
+  <div id="log"></div>
+
+  <script>
+    var container = document.getElementById('container');
+    websheet.ShowToolbar = true;
+    var ws = new websheet('print-test', container);
+    var activeSheet = ws.ActiveSheet();
+    var wbView = ws.getWorkBookView();
+    var sheetView = wbView.getSheetView();
+
+    function log(msg, type) {
+      var logEl = document.getElementById('log');
+      var prefix = '';
+      if (type === 'success') prefix = '✓ ';
+      else if (type === 'error') prefix = '✗ ';
+      else if (type === 'warn') prefix = '⚠ ';
+      logEl.innerHTML += '<div class="log-' + (type || 'info') + '">' + prefix + msg + '</div>';
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    function applyTestData() {
+      log('开始填充测试数据...', 'info');
+
+      // 标题行
+      activeSheet.SetCellValue('A1', '打印功能测试');
+      activeSheet.AddMergeCells(['A1:F1']);
+      sheetView.setActiveRange('A1');
+      sheetView.SetFontFamily('黑体');
+      sheetView.SetFontSize(18);
+      sheetView.SetFontColor('#1e40af');
+      sheetView.SetAlign('center');
+
+      // 数据区域
+      var headers = ['产品', '一月', '二月', '三月', '合计', '备注'];
+      for (var i = 0; i < headers.length; i++) {
+        activeSheet.SetCellValue(String.fromCharCode(65 + i) + '2', headers[i]);
+      }
+      sheetView.setActiveRange('A2:F2');
+      sheetView.SetFontFamily('宋体');
+      sheetView.SetFontSize(12);
+      sheetView.SetFontColor('#ffffff');
+      sheetView.SetCellFillColor('#3b82f6');
+
+      // 数据行
+      var data = [
+        ['产品A', 100, 120, 130, null, '增长产品'],
+        ['产品B', 80, 95, 110, null, '稳定产品'],
+        ['产品C', 60, 70, 85, null, '新产品'],
+        ['产品D', 150, 140, 160, null, '核心产品'],
+        ['产品E', 90, 100, 95, null, '下降产品'],
+      ];
+      for (var row = 0; row < data.length; row++) {
+        var r = row + 3;
+        for (var col = 0; col < data[row].length; col++) {
+          if (col === 4) {
+            // 合计列用公式
+            activeSheet.SetCellValue('E' + r, '=SUM(B' + r + ':D' + r + ')');
+          } else {
+            activeSheet.SetCellValue(String.fromCharCode(65 + col) + r, data[row][col]);
+          }
+        }
+        sheetView.setActiveRange('A' + r + ':F' + r);
+        sheetView.SetFontFamily('宋体');
+        sheetView.SetFontSize(11);
+        if (row % 2 === 0) {
+          sheetView.SetCellFillColor('#f3f4f6');
+        }
+      }
+
+      // 汇总行
+      activeSheet.SetCellValue('A8', '合计');
+      sheetView.setActiveRange('A8');
+      sheetView.SetFontFamily('宋体');
+      sheetView.SetFontSize(12);
+
+      for (var col = 1; col <= 4; col++) {
+        var colLetter = String.fromCharCode(65 + col);
+        activeSheet.SetCellValue(colLetter + '8', '=SUM(' + colLetter + '3:' + colLetter + '7)');
+      }
+      sheetView.setActiveRange('A8:F8');
+      sheetView.SetCellBorder('all', 'thin', '#374151');
+
+      // 添加边框
+      sheetView.setActiveRange('A2:F8');
+      sheetView.SetCellBorder('all', 'thin', '#d1d5db');
+
+      // 添加合并单元格测试
+      activeSheet.SetCellValue('A10', '合并单元格测试');
+      activeSheet.AddMergeCells(['A10:C10']);
+      sheetView.setActiveRange('A10');
+      sheetView.SetFontFamily('楷体');
+      sheetView.SetFontSize(14);
+      sheetView.SetAlign('center');
+
+      // 字体测试区域
+      activeSheet.SetCellValue('A12', '宋体 12pt');
+      activeSheet.SetCellValue('B12', '黑体 12pt');
+      activeSheet.SetCellValue('C12', '楷体 12pt');
+      activeSheet.SetCellValue('D12', '仿宋 12pt');
+
+      sheetView.setActiveRange('A12');
+      sheetView.SetFontFamily('宋体');
+      sheetView.SetFontSize(12);
+
+      sheetView.setActiveRange('B12');
+      sheetView.SetFontFamily('黑体');
+      sheetView.SetFontSize(12);
+
+      sheetView.setActiveRange('C12');
+      sheetView.SetFontFamily('楷体');
+      sheetView.SetFontSize(12);
+
+      sheetView.setActiveRange('D12');
+      sheetView.SetFontFamily('仿宋');
+      sheetView.SetFontSize(12);
+
+      // 颜色测试
+      activeSheet.SetCellValue('A14', '红色文字');
+      sheetView.setActiveRange('A14');
+      sheetView.SetFontColor('#dc2626');
+
+      activeSheet.SetCellValue('B14', '绿色文字');
+      sheetView.setActiveRange('B14');
+      sheetView.SetFontColor('#16a34a');
+
+      activeSheet.SetCellValue('C14', '蓝色文字');
+      sheetView.setActiveRange('C14');
+      sheetView.SetFontColor('#2563eb');
+
+      // 日期测试
+      activeSheet.SetCellValue('A16', new Date());
+      sheetView.setActiveRange('A16');
+      sheetView.SetNumberFormat('yyyy-mm-dd');
+
+      activeSheet.SetCellValue('B16', new Date());
+      sheetView.setActiveRange('B16');
+      sheetView.SetNumberFormat('yyyy年mm月dd日');
+
+      // 列宽
+      activeSheet.setColWidth(1, 150);
+      activeSheet.setColWidth(2, 100);
+      activeSheet.setColWidth(3, 100);
+      activeSheet.setColWidth(4, 100);
+      activeSheet.setColWidth(5, 100);
+      activeSheet.setColWidth(6, 150);
+
+      ws.BuildSheet();
+      ws.Draw();
+
+      log('测试数据填充完成', 'success');
+    }
+
+    function clearAll() {
+      log('清空所有数据...', 'info');
+      activeSheet = ws.ActiveSheet();
+      // 删除所有行
+      for (var row = 1; row <= 20; row++) {
+        for (var col = 1; col <= 6; col++) {
+          activeSheet.SetCellValue(String.fromCharCode(64 + col) + row, '');
+        }
+      }
+      ws.BuildSheet();
+      ws.Draw();
+      log('已清空', 'success');
+    }
+
+    function doPrint() {
+      log('触发打印...', 'info');
+      try {
+        ws.printActiveSheet();
+        log('打印命令已发送', 'success');
+      } catch (e) {
+        log('打印失败: ' + e.message, 'error');
+        console.error(e);
+      }
+    }
+
+    function applyPageSettings() {
+      var paperSize = parseInt(document.getElementById('paperSize').value);
+      var orientation = document.getElementById('orientation').value;
+      var scale = parseInt(document.getElementById('scale').value);
+
+      // 应用页面设置
+      activeSheet.pageSetup.paperSize = paperSize;
+      activeSheet.pageSetup.orientation = orientation;
+      activeSheet.pageSetup.scale = scale;
+
+      log('页面设置已应用 - 纸张:' + paperSize + ' 方向:' + orientation + ' 缩放:' + scale + '%', 'success');
+    }
+
+    function loadFile(event) {
+      var file = event.target.files[0];
+      if (!file) return;
+
+      log('加载文件: ' + file.name, 'info');
+
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          var data = new Uint8Array(e.target.result);
+          ws.LoadFromArrayBuffer(data);
+          log('文件加载成功', 'success');
+        } catch (err) {
+          log('文件加载失败: ' + err.message, 'error');
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    // 初始化
+    applyTestData();
+    log('打印测试页面已就绪，点击"打印"按钮测试', 'info');
+  </script>
+</body>
+</html>

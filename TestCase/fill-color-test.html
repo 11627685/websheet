@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>FillColorCommand 单元格底色 撤销/重做测试</title>
+    <script src="../dist/websheet.umd.js"></script>
+    <link rel="stylesheet" href="../dist/style.css">
+    <style>
+        body { margin: 0; font-family: Arial, sans-serif; }
+        #header {
+            padding: 10px 20px;
+            background: #f5f5f5;
+            border-bottom: 1px solid #ddd;
+        }
+        #header h1 { margin: 0 0 6px 0; font-size: 16px; }
+        #info {
+            font-size: 12px; color: #666;
+            padding: 4px 8px; background: #fff; border-radius: 4px;
+            display: inline-block;
+        }
+        #container {
+            width: 100%;
+            height: 500px;
+        }
+        #logPanel {
+            height: 260px;
+            overflow-y: auto;
+            background: #1e1e1e;
+            color: #d4d4d4;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            padding: 8px 12px;
+        }
+        .log-entry { margin: 2px 0; }
+        .log-action { color: #569cd6; }
+        .log-undo { color: #ce9178; }
+        .log-redo { color: #b5cea8; }
+        .log-info { color: #6a9955; }
+        .log-error { color: #f44747; }
+        .log-pass { color: #4ec9b0; font-weight: bold; }
+        .log-fail { color: #f44747; font-weight: bold; }
+        #testButtons {
+            padding: 8px 20px;
+            background: #fafafa;
+            border-bottom: 1px solid #ddd;
+        }
+        #testButtons button {
+            margin-right: 8px;
+            padding: 4px 12px;
+            font-size: 12px;
+            cursor: pointer;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            background: #fff;
+        }
+        #testButtons button:hover { background: #e8f0fe; }
+    </style>
+</head>
+<body>
+    <div id="header">
+        <h1>FillColorCommand 单元格底色 撤销/重做测试</h1>
+        <span id="info">测试单元格底色 Command 模式：设置 → 清除 → 撤销 → 重做</span>
+    </div>
+    <div id="testButtons">
+        <button onclick="runFillColorTestSequence()">底色测试序列</button>
+        <button onclick="checkState()">检查当前状态</button>
+        <button onclick="clearLog()">清空日志</button>
+        <span style="font-size:12px;color:#666;margin-left:12px;">
+            手动测试：选中单元格 → 工具栏油漆桶按钮选色 → Ctrl+Z 撤销 → Ctrl+Y 重做
+        </span>
+    </div>
+    <div id="container"></div>
+    <div id="logPanel"></div>
+
+    <script>
+        var logPanel = document.getElementById('logPanel');
+
+        function log(type, msg) {
+            var entry = document.createElement('div');
+            entry.className = 'log-entry log-' + type;
+            var time = new Date().toLocaleTimeString();
+            entry.textContent = '[' + time + '] ' + msg;
+            logPanel.appendChild(entry);
+            logPanel.scrollTop = logPanel.scrollHeight;
+        }
+
+        function clearLog() { logPanel.innerHTML = ''; }
+
+        // 初始化 WebSheet
+        websheet.ShowToolbar = true;
+        var container = document.getElementById('container');
+        var ws = new websheet('testId', container);
+
+        var wbView = ws.getWorkBookView();
+        var sheetView = wbView.getSheetView();
+        var activeSheet = ws.ActiveSheet();
+
+        // 填入测试数据
+        var testData = [
+            ['A1', '姓名'], ['B1', '年龄'], ['C1', '城市'],
+            ['A2', '张三'], ['B2', '25'],   ['C2', '上海'],
+            ['A3', '李四'], ['B3', '30'],   ['C3', '北京'],
+            ['A4', '王五'], ['B4', '28'],   ['C4', '广州'],
+        ];
+
+        testData.forEach(function(item) {
+            var cell = new websheet.Model.Cell();
+            cell.r = item[0];
+            cell.v = item[1];
+            cell.s = 0;
+            activeSheet.SetCellValue(item[0], cell);
+        });
+
+        ws.BuildSheet();
+        ws.Draw();
+
+        log('info', 'WebSheet 初始化完成，测试数据已填入 A1:C4');
+        log('info', 'Undo栈长度: ' + wbView.unDoRedo.GetUndoLength());
+
+        // === 辅助函数 ===
+
+        // 获取单元格底色（fgColor.rgb），无底色返回 '(none)'
+        function getCellFillColor(addr) {
+            var cell = activeSheet.GetCellByRef(addr);
+            var style = activeSheet.GetCellStyleByCell(cell);
+            if (!style.fill || !style.fill.patternFill) return '(none)';
+            var fg = style.fill.patternFill.fgColor;
+            if (!fg || fg.rgb === '') return '(none)';
+            return fg.rgb;
+        }
+
+        function doUndo() {
+            wbView.unDoRedo.Undo();
+            ws.BuildSheet(); ws.Draw();
+        }
+
+        function doRedo() {
+            wbView.unDoRedo.Redo();
+            ws.BuildSheet(); ws.Draw();
+        }
+
+        function doSetFillColor(range, hex) {
+            sheetView.setActiveRange(range);
+            sheetView.SetCellFillColor(hex);
+            ws.BuildSheet(); ws.Draw();
+        }
+
+        function doClearFillColor(range) {
+            sheetView.setActiveRange(range);
+            sheetView.SetCellFillColor(null);
+            ws.BuildSheet(); ws.Draw();
+        }
+
+        function assert(condition, msg) {
+            if (condition) {
+                log('pass', '  PASS ' + msg);
+            } else {
+                log('fail', '  FAIL ' + msg);
+            }
+        }
+
+        function checkState() {
+            log('info', '=== 当前状态 ===');
+            log('info', 'Undo栈=' + wbView.unDoRedo.GetUndoLength() +
+                ' Redo栈=' + wbView.unDoRedo.GetRedoLengt());
+            var addrs = ['A1','B1','C1','A2','B2','C2','A3','B3','C3'];
+            addrs.forEach(function(addr) {
+                log('info', '  ' + addr + ' fill=' + getCellFillColor(addr));
+            });
+        }
+
+        // === 自动测试序列 ===
+
+        function runFillColorTestSequence() {
+            clearLog();
+            log('action', '====== 开始单元格底色自动测试序列 ======');
+
+            // --- 测试 1：多单元格设置红色 ---
+            log('action', '测试 1: A1:C1 设置红色底色 (#FF0000)');
+            doSetFillColor('A1:C1', '#FF0000');
+            log('info', '>>> 请目视确认 A1:C1 背景为红色');
+            assert(getCellFillColor('A1') === '#FF0000', 'A1 应为 #FF0000, 实际=' + getCellFillColor('A1'));
+            assert(getCellFillColor('B1') === '#FF0000', 'B1 应为 #FF0000, 实际=' + getCellFillColor('B1'));
+            assert(getCellFillColor('C1') === '#FF0000', 'C1 应为 #FF0000, 实际=' + getCellFillColor('C1'));
+            assert(wbView.unDoRedo.GetUndoLength() === 1, 'Undo栈应为 1, 实际=' + wbView.unDoRedo.GetUndoLength());
+
+            // --- 测试 2：不同区域设置蓝色 ---
+            log('action', '测试 2: A2:C2 设置蓝色底色 (#0000FF)');
+            doSetFillColor('A2:C2', '#0000FF');
+            log('info', '>>> 请目视确认 A2:C2 背景为蓝色');
+            assert(getCellFillColor('A2') === '#0000FF', 'A2 应为 #0000FF, 实际=' + getCellFillColor('A2'));
+            assert(getCellFillColor('B2') === '#0000FF', 'B2 应为 #0000FF, 实际=' + getCellFillColor('B2'));
+            assert(wbView.unDoRedo.GetUndoLength() === 2, 'Undo栈应为 2, 实际=' + wbView.unDoRedo.GetUndoLength());
+
+            // --- 测试 3：撤销蓝色 ---
+            log('undo', '测试 3: 撤销（A2:C2 应恢复为 none）');
+            doUndo();
+            log('info', '>>> 请目视确认 A2:C2 背景恢复为无填充');
+            assert(getCellFillColor('A2') === '(none)', 'A2 应为 (none), 实际=' + getCellFillColor('A2'));
+            assert(getCellFillColor('B2') === '(none)', 'B2 应为 (none), 实际=' + getCellFillColor('B2'));
+            assert(getCellFillColor('A1') === '#FF0000', 'A1 应仍为 #FF0000, 实际=' + getCellFillColor('A1'));
+            assert(wbView.unDoRedo.GetUndoLength() === 1, 'Undo栈应为 1, 实际=' + wbView.unDoRedo.GetUndoLength());
+            assert(wbView.unDoRedo.GetRedoLengt() === 1, 'Redo栈应为 1, 实际=' + wbView.unDoRedo.GetRedoLengt());
+
+            // --- 测试 4：撤销红色 ---
+            log('undo', '测试 4: 再次撤销（A1:C1 应恢复为 none）');
+            doUndo();
+            log('info', '>>> 请目视确认 A1:C1 背景恢复为无填充');
+            assert(getCellFillColor('A1') === '(none)', 'A1 应为 (none), 实际=' + getCellFillColor('A1'));
+            assert(getCellFillColor('B1') === '(none)', 'B1 应为 (none), 实际=' + getCellFillColor('B1'));
+            assert(wbView.unDoRedo.GetUndoLength() === 0, 'Undo栈应为 0, 实际=' + wbView.unDoRedo.GetUndoLength());
+            assert(wbView.unDoRedo.GetRedoLengt() === 2, 'Redo栈应为 2, 实际=' + wbView.unDoRedo.GetRedoLengt());
+
+            // --- 测试 5：重做红色 ---
+            log('redo', '测试 5: 重做（A1:C1 应恢复为 #FF0000）');
+            doRedo();
+            log('info', '>>> 请目视确认 A1:C1 背景恢复为红色');
+            assert(getCellFillColor('A1') === '#FF0000', 'A1 应为 #FF0000, 实际=' + getCellFillColor('A1'));
+            assert(getCellFillColor('B1') === '#FF0000', 'B1 应为 #FF0000, 实际=' + getCellFillColor('B1'));
+            assert(wbView.unDoRedo.GetUndoLength() === 1, 'Undo栈应为 1, 实际=' + wbView.unDoRedo.GetUndoLength());
+
+            // --- 测试 6：重做蓝色 ---
+            log('redo', '测试 6: 再次重做（A2:C2 应恢复为 #0000FF）');
+            doRedo();
+            log('info', '>>> 请目视确认 A2:C2 背景恢复为蓝色');
+            assert(getCellFillColor('A2') === '#0000FF', 'A2 应为 #0000FF, 实际=' + getCellFillColor('A2'));
+            assert(getCellFillColor('B2') === '#0000FF', 'B2 应为 #0000FF, 实际=' + getCellFillColor('B2'));
+            assert(wbView.unDoRedo.GetUndoLength() === 2, 'Undo栈应为 2, 实际=' + wbView.unDoRedo.GetUndoLength());
+
+            // --- 测试 7：单单元格设置绿色 ---
+            log('action', '测试 7: 单个单元格 B3 设置绿色底色 (#008000)');
+            doSetFillColor('B3', '#008000');
+            log('info', '>>> 请目视确认 B3 背景为绿色');
+            assert(getCellFillColor('B3') === '#008000', 'B3 应为 #008000, 实际=' + getCellFillColor('B3'));
+            assert(wbView.unDoRedo.GetUndoLength() === 3, 'Undo栈应为 3, 实际=' + wbView.unDoRedo.GetUndoLength());
+
+            // --- 测试 8：撤销单单元格 ---
+            log('undo', '测试 8: 撤销（B3 应恢复为 none）');
+            doUndo();
+            assert(getCellFillColor('B3') === '(none)', 'B3 应为 (none), 实际=' + getCellFillColor('B3'));
+            assert(getCellFillColor('A2') === '#0000FF', 'A2 应仍为 #0000FF, 实际=' + getCellFillColor('A2'));
+
+            // --- 测试 9：清除已有底色 ---
+            log('action', '测试 9: A1:C1 已有红色，用"无填充"清除底色');
+            doClearFillColor('A1:C1');
+            log('info', '>>> 请目视确认 A1:C1 背景恢复为无填充');
+            assert(getCellFillColor('A1') === '(none)', 'A1 应为 (none), 实际=' + getCellFillColor('A1'));
+            assert(getCellFillColor('C1') === '(none)', 'C1 应为 (none), 实际=' + getCellFillColor('C1'));
+
+            // --- 测试 10：撤销清除，应恢复红色 ---
+            log('undo', '测试 10: 撤销清除（A1:C1 应恢复为 #FF0000）');
+            doUndo();
+            log('info', '>>> 请目视确认 A1:C1 背景恢复为红色');
+            assert(getCellFillColor('A1') === '#FF0000', 'A1 应恢复 #FF0000, 实际=' + getCellFillColor('A1'));
+            assert(getCellFillColor('C1') === '#FF0000', 'C1 应恢复 #FF0000, 实际=' + getCellFillColor('C1'));
+
+            // --- 测试 11：颜色覆盖后撤销恢复之前的颜色 ---
+            log('action', '测试 11: 颜色覆盖后撤销应恢复之前的颜色');
+            doSetFillColor('A1', '#0000FF');  // 蓝色覆盖红色
+            assert(getCellFillColor('A1') === '#0000FF', 'A1 应为 #0000FF, 实际=' + getCellFillColor('A1'));
+            doUndo(); // 撤销蓝色，应恢复红色
+            assert(getCellFillColor('A1') === '#FF0000', 'A1 应恢复 #FF0000, 实际=' + getCellFillColor('A1'));
+            doUndo(); // 撤销红色
+            assert(getCellFillColor('A1') === '(none)', 'A1 应恢复 (none), 实际=' + getCellFillColor('A1'));
+
+            log('action', '====== 底色测试序列结束 ======');
+            log('info', '最终状态: Undo栈=' + wbView.unDoRedo.GetUndoLength() +
+                ' Redo栈=' + wbView.unDoRedo.GetRedoLengt());
+            log('info', '提示：如所有 PASS 且目视效果正确，则单元格底色功能正常');
+        }
+    </script>
+</body>
+</html>

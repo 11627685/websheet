@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+  <style>
+    /* 遮罩层样式 ‌:ml-citation{ref="1,2" data="citationList"} */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.4);
+      justify-content: center;
+      align-items: center;
+    }
+
+    /* 弹窗内容样式 ‌:ml-citation{ref="2" data="citationList"} */
+    .modal-content {
+      background-color: #fff;
+      padding: 20px;
+      border-radius: 5px;
+      width: 400px;
+      box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2);
+    }
+
+    /* 表单布局 */
+    .form-group {
+      margin: 15px 0;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 5px;
+    }
+
+    input {
+      width: 95%;
+      padding: 8px;
+    }
+
+    /* 按钮组 */
+    .button-group {
+      text-align: right;
+      margin-top: 20px;
+    }
+
+    button {
+      padding: 8px 15px;
+      margin-left: 10px;
+      cursor: pointer;
+    }
+  </style>
+  <meta charset="UTF-8">
+  <title>websheet Demo</title>
+ 
+  <style>
+    .hljs-ln-numbers {
+      text-align: right;
+      color: #7d7d7d;
+      padding-right: 15px;
+      border-right: 1px solid #555;
+    }
+
+    .code-container {
+      position: relative;
+    }
+
+    .copy-btn {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      padding: 4px 8px;
+      background: #f0f0f0;
+      border: 1px solid #ccc;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+
+    .copy-btn:hover {
+      background: #e0e0e0;
+    }
+  </style>
+  <link href="./dist/monokai-sublime.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="./dist/style.css">
+</head>
+
+<body>
+
+
+  <div id="myModal" class="modal">
+    <div class="modal-content">
+      <form id="customerForm">
+        <div class="form-group">
+          <label>客户代码:</label>
+          <input type="text" id="customerCode" readonly>
+        </div>
+        <div class="form-group">
+          <label>客户名称:</label>
+          <input type="text" id="customerName" required>
+        </div>
+        <div class="form-group">
+          <label>地址:</label>
+          <input type="text" id="address">
+        </div>
+        <div class="form-group">
+          <label>网站:</label>
+          <input type="url" id="website">
+        </div>
+        <div class="button-group">
+          <button type="button" id="submitForm">确认</button>
+          <button type="button" id="closeModal">取消</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id='yourElement'>
+  </div>
+ 
+
+  弹出页面代码：
+  <div class="code-container">
+    <button class="copy-btn">复制</button>
+
+
+
+    <pre><code class="language-javascript"  >
+      &lt;div id="myModal" class="modal"&gt;
+        &lt;div class="modal-content"&gt;
+          &lt;form id="customerForm"&gt;
+            &lt;div class="form-group"&gt;
+              &lt;label&gt;客户代码:&lt;/label&gt;
+              &lt;input type="text" id="customerCode" readonly&gt;
+            &lt;/div&gt;
+            &lt;div class="form-group"&gt;
+              &lt;label&gt;客户名称:&lt;/label&gt;
+              &lt;input type="text" id="customerName" required&gt;
+            &lt;/div&gt;
+            &lt;div class="form-group"&gt;
+              &lt;label&gt;地址:&lt;/label&gt;
+              &lt;input type="text" id="address"&gt;
+            &lt;/div&gt;
+            &lt;div class="form-group"&gt;
+              &lt;label&gt;网站:&lt;/label&gt;
+              &lt;input type="url" id="website"&gt;
+            &lt;/div&gt;
+            &lt;div class="button-group"&gt;
+              &lt;button type="button" id="submitForm"&gt;确认&lt;/button&gt;
+              &lt;button type="button" id="closeModal"&gt;取消&lt;/button&gt;
+            &lt;/div&gt;
+          &lt;/form&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+
+    </code></pre>
+  </div>
+
+
+  JAVASCRIPT代码部分：
+  <div class="code-container">
+    <button class="copy-btn">复制</button>
+
+
+
+    <pre><code class="language-javascript"  >
+    let yourElement = document.getElementById("yourElement");
+    let wsheet = new websheet('HTML', yourElement,0,0,800,400);
+
+    class PopFrom {
+
+      static #instance;
+      constructor() {
+        if (!PopFrom.#instance) {
+          PopFrom.#instance = this;
+          console.log('11111111');
+          document.getElementById('closeModal').addEventListener('click', this.closeModal);
+          this.submitDate = this.submitDate.bind(this);
+          document.getElementById('submitForm').addEventListener('click', this.submitDate);
+          this.click_number = 1;
+        }
+        return PopFrom.#instance;
+      }
+
+      openModal(code, editCell) {
+        document.getElementById('customerCode').value = code;
+        document.getElementById('myModal').style.display = 'flex';
+        this.EditCell = editCell;
+      }
+
+      submitDate() {
+        const formData = {
+          code: document.getElementById('customerCode').value,
+          name: document.getElementById('customerName').value,
+          address: document.getElementById('address').value,
+          website: document.getElementById('website').value
+        };
+        console.log('你的数据:', formData);
+        //修改单元格数据 这里设置ABCDEFG 
+        this.EditCell.SetCellValue('ABCDEFG' + this.click_number++);
+        this.closeModal();
+      }
+
+      closeModal() {
+        document.getElementById('myModal').style.display = 'none';
+      }
+    }
+
+    let yourElement = document.getElementById("yourElement");
+   let wsheet = new websheet('HTML', yourElement, 0, 0, document.documentElement.clientWidth * 0.99, document.documentElement.clientHeight*0.6);
+
+
+    class PopEditCell extends websheet.Model.BaseCell {
+
+
+      /**
+      * 
+      * @param x  单元格的开始坐X标
+      * @param y   单元格的开始坐Y标
+      * @param width width 单元格的宽度
+      * @param height height单元格的高度
+      * @param Document 
+      */
+      constructor(canvas, ctx, x, y, width, height, document) {
+        super(canvas, ctx, x, y, width, height, document);//必须调用父类
+        //初始化你自己的变量
+        this.popFrom = new PopFrom();
+        this.name = 'PopEditCell';//控件的名称
+      }
+
+      Draw() {
+        super.Draw();//必须调用父类
+        //这里你的代码 
+        this.drawArrowWithPath();
+      }
+
+      // 绘制箭头和方框
+      drawArrowWithPath() {
+        // 绘制绿色倒三角
+        this.ctx.fillStyle = 'lightgreen';
+        this.ctx.beginPath();
+        this.ctx.moveTo(this.x + this.width - 16, this.y + this.height - 10);               // 右下角顶点
+        this.ctx.lineTo(this.x + this.width, this.y + this.height - 10); // 向左延伸底边
+        this.ctx.lineTo(this.x + this.width - 8, this.y + this.height - 2); // 向上延伸侧边
+        this.ctx.closePath();
+        this.ctx.fill();
+      }
+
+      // public CellClick(event: MouseEvent): void {
+      //   alert('CellClick');
+      // }
+
+      CellDbClick(event) {
+        //alert('CellDbClick');
+        this.popFrom.openModal(this.value, this);
+      }
+
+    }
+
+
+
+    /**
+    * 第一步 获取激活sheet
+    */
+
+
+    let activeSheet = wsheet.ActiveSheet();
+
+    activeSheet.SetCellValue('A3', '自定义弹出');
+
+    /**
+    * 第二步 一个下进度条控件，并注册
+    */
+
+
+    activeSheet.SetCellValue('B3', 'A0000001');//
+
+    activeSheet.setCellEditor('B3', PopEditCell);
+
+
+    activeSheet.SetCellValue('B5', 'A0000005');//
+    activeSheet.setCellEditor('B5', PopEditCell);
+
+
+    /**
+    * 第三步   重新绘制表格
+    */
+    activeSheet.setColWidth(1, 160);
+    activeSheet.setColWidth(2, 260);
+    activeSheet.setColWidth(3, 160);
+    activeSheet.setColWidth(4, 160);
+    activeSheet.setColWidth(5, 160);
+    activeSheet.WorkFormula(); //重建公式
+    activeSheet.cacl();//公式计算
+
+    wsheet.BuildSheet();
+    wsheet.Draw();
+
+
+    </code></pre>
+  </div>
+
+  
+  <script type="module">
+
+    class PopFrom {
+
+      static #instance;
+      constructor() {
+        if (!PopFrom.#instance) {
+          PopFrom.#instance = this;
+          console.log('11111111');
+          document.getElementById('closeModal').addEventListener('click', this.closeModal);
+          this.submitDate = this.submitDate.bind(this);
+          document.getElementById('submitForm').addEventListener('click', this.submitDate);
+          this.click_number = 1;
+        }
+        return PopFrom.#instance;
+      }
+
+      openModal(code, editCell) {
+        document.getElementById('customerCode').value = code;
+        document.getElementById('myModal').style.display = 'flex';
+        this.EditCell = editCell;
+      }
+
+      submitDate() {
+        const formData = {
+          code: document.getElementById('customerCode').value,
+          name: document.getElementById('customerName').value,
+          address: document.getElementById('address').value,
+          website: document.getElementById('website').value
+        };
+        console.log('你的数据:', formData);
+        //修改单元格数据 这里设置ABCDEFG 
+        this.EditCell.SetCellValue('ABCDEFG' + this.click_number++);
+        this.closeModal();
+      }
+
+      closeModal() {
+        document.getElementById('myModal').style.display = 'none';
+      }
+    }
+
+    let yourElement = document.getElementById("yourElement");
+   let wsheet = new websheet('HTML', yourElement, 0, 0, document.documentElement.clientWidth * 0.99, document.documentElement.clientHeight*0.6);
+
+
+    class PopEditCell extends websheet.Model.BaseCell {
+
+
+      /**
+      * 
+      * @param x  单元格的开始坐X标
+      * @param y   单元格的开始坐Y标
+      * @param width width 单元格的宽度
+      * @param height height单元格的高度
+      * @param Document 
+      */
+      constructor(canvas, ctx, x, y, width, height, document) {
+        super(canvas, ctx, x, y, width, height, document);//必须调用父类
+        //初始化你自己的变量
+        this.popFrom = new PopFrom();
+        this.name = 'PopEditCell';//控件的名称
+      }
+
+      Draw() {
+        super.Draw();//必须调用父类
+        //这里你的代码 
+        this.drawArrowWithPath();
+      }
+
+      // 绘制箭头和方框
+      drawArrowWithPath() {
+        // 绘制绿色倒三角
+        this.ctx.fillStyle = 'lightgreen';
+        this.ctx.beginPath();
+        this.ctx.moveTo(this.x + this.width - 16, this.y + this.height - 10);               // 右下角顶点
+        this.ctx.lineTo(this.x + this.width, this.y + this.height - 10); // 向左延伸底边
+        this.ctx.lineTo(this.x + this.width - 8, this.y + this.height - 2); // 向上延伸侧边
+        this.ctx.closePath();
+        this.ctx.fill();
+      }
+
+      // public CellClick(event: MouseEvent): void {
+      //   alert('CellClick');
+      // }
+
+      CellDbClick(event) {
+        //alert('CellDbClick');
+        this.popFrom.openModal(this.value, this);
+      }
+
+    }
+
+
+
+    /**
+    * 第一步 获取激活sheet
+    */
+
+
+    let activeSheet = wsheet.ActiveSheet();
+
+    activeSheet.SetCellValue('A3', '自定义弹出');
+
+    /**
+    * 第二步 一个下进度条控件，并注册
+    */
+
+
+    activeSheet.SetCellValue('B3', 'A0000001');//
+
+    activeSheet.setCellEditor('B3', PopEditCell);
+
+
+    activeSheet.SetCellValue('B5', 'A0000005');//
+    activeSheet.setCellEditor('B5', PopEditCell);
+
+
+    /**
+    * 第三步   重新绘制表格
+    */
+    activeSheet.setColWidth(1, 160);
+    activeSheet.setColWidth(2, 260);
+    activeSheet.setColWidth(3, 160);
+    activeSheet.setColWidth(4, 160);
+    activeSheet.setColWidth(5, 160);
+    activeSheet.WorkFormula(); //重建公式
+    activeSheet.cacl();//公式计算
+
+    wsheet.BuildSheet();
+    wsheet.Draw();
+
+  </script>
+
+
+
+<script src="./dist/highlight.min.js"></script>
+<script src="./dist/highlightjs-line-numbers.min.js"></script>
+
+<script>
+
+  // 高亮代码并添加行号
+  document.addEventListener('DOMContentLoaded', () => {
+    hljs.highlightAll();
+    // 添加行号（支持 CSS 选择器）
+    hljs.initLineNumbersOnLoad();
+  });
+
+
+
+  document.querySelectorAll('.code-container').forEach(container => {
+    const btn = container.querySelector('.copy-btn');
+    const codeBlock = container.querySelector('code');
+
+    btn.addEventListener('click', () => {
+      // 现代浏览器 API（推荐）
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(codeBlock.textContent)
+          .then(() => {
+            btn.textContent = '已复制!';
+            setTimeout(() => btn.textContent = '复制', 1500);
+          });
+      }
+      // 兼容旧浏览器的降级方案
+      else {
+        const textarea = document.createElement('textarea');
+        textarea.value = codeBlock.textContent;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+        btn.textContent = '已复制!';
+        setTimeout(() => btn.textContent = '复制', 1500);
+      }
+    });
+  });
+
+</script>
+<script src="./dist/crypto-js.min.js"></script>
+<script src="./dist/jsrsasign-all-min.js"></script>
+<script type="text/javascript" src="./dist/xmlbuilder2.min.js"></script>
+<script type="text/javascript" src="./dist/websheet.umd.js"></script>
+</body>
+
+</html>

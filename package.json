@@ -1,0 +1,24 @@
+{
+  "name": "@likewindy/websheet",
+  "version": "1.1.1",
+  "private": false,
+  "type": "module",
+  "main": "websheet.umd.js",
+  "exports": {
+    ".": {
+      "require": "./websheet.umd.js"
+    }
+  },
+  "scripts": {},
+  "dependencies": {},
+  "description": "Websheet is a pure front-end xlsx file display control developed based on HTML5 CANVAS and JAVASCRIPT. ",
+  "keywords": [
+    "spreadsheet",
+    "sheet",
+    "xlsx",
+    "excel",
+    "wps"
+  ],
+  "author": "11627685@qq.com",
+  "license": "MIT 许可证 + 水印保留条款"
+}

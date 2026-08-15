@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>BorderCommand 边框 撤销/重做测试</title>
+    <script src="../dist/websheet.umd.js"></script>
+    <link rel="stylesheet" href="../dist/style.css">
+    <style>
+        body { margin: 0; font-family: Arial, sans-serif; }
+        #header {
+            padding: 10px 20px;
+            background: #f5f5f5;
+            border-bottom: 1px solid #ddd;
+        }
+        #header h1 { margin: 0 0 6px 0; font-size: 16px; }
+        #info {
+            font-size: 12px; color: #666;
+            padding: 4px 8px; background: #fff; border-radius: 4px;
+            display: inline-block;
+        }
+        #container {
+            width: 100%;
+            height: 500px;
+        }
+        #logPanel {
+            height: 280px;
+            overflow-y: auto;
+            background: #1e1e1e;
+            color: #d4d4d4;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            padding: 8px 12px;
+        }
+        .log-entry { margin: 2px 0; }
+        .log-action { color: #569cd6; }
+        .log-undo { color: #ce9178; }
+        .log-redo { color: #b5cea8; }
+        .log-info { color: #6a9955; }
+        .log-error { color: #f44747; }
+        .log-pass { color: #4ec9b0; font-weight: bold; }
+        .log-fail { color: #f44747; font-weight: bold; }
+        #testButtons {
+            padding: 8px 20px;
+            background: #fafafa;
+            border-bottom: 1px solid #ddd;
+        }
+        #testButtons button {
+            margin-right: 8px;
+            padding: 4px 12px;
+            font-size: 12px;
+            cursor: pointer;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            background: #fff;
+        }
+        #testButtons button:hover { background: #e8f0fe; }
+    </style>
+</head>
+<body>
+    <div id="header">
+        <h1>BorderCommand 边框 撤销/重做测试</h1>
+        <span id="info">测试边框 Command 模式：外侧框线 → 所有框线 → 单边框线 → 无边框 → 撤销 → 重做</span>
+    </div>
+    <div id="testButtons">
+        <button onclick="runBorderTestSequence()">边框测试序列</button>
+        <button onclick="checkState()">检查当前状态</button>
+        <button onclick="clearLog()">清空日志</button>
+        <span style="font-size:12px;color:#666;margin-left:12px;">
+            手动测试：选中单元格 → 工具栏边框按钮选类型/线型/颜色 → Ctrl+Z 撤销 → Ctrl+Y 重做
+        </span>
+    </div>
+    <div id="container"></div>
+    <div id="logPanel"></div>
+
+    <script>
+        var logPanel = document.getElementById('logPanel');
+
+        function log(type, msg) {
+            var entry = document.createElement('div');
+            entry.className = 'log-entry log-' + type;
+            var time = new Date().toLocaleTimeString();
+            entry.textContent = '[' + time + '] ' + msg;
+            logPanel.appendChild(entry);
+            logPanel.scrollTop = logPanel.scrollHeight;
+        }
+
+        function clearLog() { logPanel.innerHTML = ''; }
+
+        // 初始化 WebSheet
+        websheet.ShowToolbar = true;
+        var container = document.getElementById('container');
+        var ws = new websheet('borderTestId', container);
+
+        var wbView = ws.getWorkBookView();
+        var sheetView = wbView.getSheetView();
+        var activeSheet = ws.ActiveSheet();
+
+        // 填入测试数据
+        var testData = [
+            ['A1', '姓名'], ['B1', '年龄'], ['C1', '城市'], ['D1', '备注'],
+            ['A2', '张三'], ['B2', '25'],   ['C2', '上海'], ['D2', 'OK'],
+            ['A3', '李四'], ['B3', '30'],   ['C3', '北京'], ['D3', 'N/A'],
+            ['A4', '王五'], ['B4', '28'],   ['C4', '广州'], ['D4', 'OK'],
+        ];
+
+        testData.forEach(function(item) {
+            var cell = new websheet.Model.Cell();
+            cell.r = item[0];
+            cell.v = item[1];
+            cell.s = 0;
+            activeSheet.SetCellValue(item[0], cell);
+        });
+
+        ws.BuildSheet();
+        ws.Draw();
+
+        log('info', 'WebSheet 初始化完成，测试数据已填入 A1:D4');
+        log('info', 'Undo栈长度: ' + wbView.unDoRedo.GetUndoLength());
+
+        // === 辅助函数 ===
+
+        // 获取单元格边框状态，返回 {start, end, top, bottom} 每个为 borderStyle 或 null
+        function getCellBorder(addr) {
+            var cell = activeSheet.GetCellByRef(addr);
+            var style = activeSheet.GetCellStyleByCell(cell);
+            if (!style.border) return {start: null, end: null, top: null, bottom: null};
+            var b = style.border;
+            var r = {};
+            r.start = (b.start && b.start.borderStyle != null) ? b.start.borderStyle : null;
+            r.end = (b.end && b.end.borderStyle != null) ? b.end.borderStyle : null;
+            r.top = (b.top && b.top.borderStyle != null) ? b.top.borderStyle : null;
+            r.bottom = (b.bottom && b.bottom.borderStyle != null) ? b.bottom.borderStyle : null;
+            return r;
+        }
+
+        function borderStr(addr) {
+            var b = getCellBorder(addr);
+            return '{s:' + (b.start||'-') + ',e:' + (b.end||'-') + ',t:' + (b.top||'-') + ',b:' + (b.bottom||'-') + '}';
+        }
+
+        function doUndo() {
+            wbView.unDoRedo.Undo();
+            ws.BuildSheet(); ws.Draw();
+        }
+
+        function doRedo() {
+            wbView.unDoRedo.Redo();
+            ws.BuildSheet(); ws.Draw();
+        }
+
+        function doSetBorder(range, type, style, color) {
+            sheetView.setActiveRange(range);
+            sheetView.SetCellBorder(type, style, color);
+            ws.BuildSheet(); ws.Draw();
+        }
+
+        function assert(condition, msg) {
+            if (condition) {
+                log('pass', '  PASS ' + msg);
+            } else {
+                log('fail', '  FAIL ' + msg);
+            }
+        }
+
+        function checkState() {
+            log('info', '=== 当前边框状态 ===');
+            log('info', 'Undo栈=' + wbView.unDoRedo.GetUndoLength() +
+                ' Redo栈=' + wbView.unDoRedo.GetRedoLengt());
+            var addrs = ['A1','B1','C1','D1','A2','B2','C2','D2','A3','B3','C3','D3','A4','B4','C4','D4'];
+            addrs.forEach(function(addr) {
+                log('info', '  ' + addr + ' ' + borderStr(addr));
+            });
+        }
+
+        // === 自动测试序列 ===
+
+        function runBorderTestSequence() {
+            clearLog();
+            log('action', '====== 开始边框自动测试序列 ======');
+
+            // --- 测试 1：外侧框线 ---
+            log('action', '测试 1: A1:D4 设置外侧框线 (thin, #000000)');
+            doSetBorder('A1:D4', 'outer', 'thin', '#000000');
+            log('info', '>>> 请目视确认 A1:D4 外周有细黑线，内部无线');
+            var bA1 = getCellBorder('A1');
+            assert(bA1.start === 'thin' && bA1.top === 'thin', 'A1(左上角) 应有 start+top=thin, 实际=' + borderStr('A1'));
+            var bD1 = getCellBorder('D1');
+            assert(bD1.end === 'thin' && bD1.top === 'thin', 'D1(右上角) 应有 end+top=thin, 实际=' + borderStr('D1'));
+            var bA4 = getCellBorder('A4');
+            assert(bA4.start === 'thin' && bA4.bottom === 'thin', 'A4(左下角) 应有 start+bottom=thin, 实际=' + borderStr('A4'));
+            var bD4 = getCellBorder('D4');
+            assert(bD4.end === 'thin' && bD4.bottom === 'thin', 'D4(右下角) 应有 end+bottom=thin, 实际=' + borderStr('D4'));
+            var bB2 = getCellBorder('B2');
+            assert(bB2.start === null && bB2.end === null && bB2.top === null && bB2.bottom === null,
+                'B2(内部) 应无任何边框, 实际=' + borderStr('B2'));
+            assert(wbView.unDoRedo.GetUndoLength() === 1, 'Undo栈应为 1, 实际=' + wbView.unDoRedo.GetUndoLength());
+
+            // --- 测试 2：撤销外侧框线 ---
+            log('undo', '测试 2: 撤销（所有边框应清除）');
+            doUndo();
+            var bA1b = getCellBorder('A1');
+            assert(bA1b.start === null && bA1b.top === null, 'A1 应无边框, 实际=' + borderStr('A1'));
+            var bD4b = getCellBorder('D4');
+            assert(bD4b.end === null && bD4b.bottom === null, 'D4 应无边框, 实际=' + borderStr('D4'));
+            assert(wbView.unDoRedo.GetUndoLength() === 0, 'Undo栈应为 0');
+            assert(wbView.unDoRedo.GetRedoLengt() === 1, 'Redo栈应为 1');
+
+            // --- 测试 3：重做外侧框线 ---
+            log('redo', '测试 3: 重做（A1:D4 外侧框线恢复）');
+            doRedo();
+            var bA1c = getCellBorder('A1');
+            assert(bA1c.start === 'thin' && bA1c.top === 'thin', 'A1 应恢复 start+top=thin, 实际=' + borderStr('A1'));
+
+            // --- 测试 4：所有框线 ---
+            log('action', '测试 4: A1:D4 设置所有框线 (thin, #000000)');
+            doSetBorder('A1:D4', 'all', 'thin', '#000000');
+            log('info', '>>> 请目视确认 A1:D4 每个单元格都有四边线');
+            var bB2d = getCellBorder('B2');
+            assert(bB2d.start === 'thin' && bB2d.end === 'thin' && bB2d.top === 'thin' && bB2d.bottom === 'thin',
+                'B2 应有四边=thin, 实际=' + borderStr('B2'));
+            assert(wbView.unDoRedo.GetUndoLength() === 2, 'Undo栈应为 2, 实际=' + wbView.unDoRedo.GetUndoLength());
+
+            // --- 测试 5：撤销所有框线，恢复外侧框线 ---
+            log('undo', '测试 5: 撤销（应恢复为仅外侧框线）');
+            doUndo();
+            var bB2e = getCellBorder('B2');
+            assert(bB2e.start === null && bB2e.top === null, 'B2 应恢复无内部边框, 实际=' + borderStr('B2'));
+            var bA1e = getCellBorder('A1');
+            assert(bA1e.start === 'thin' && bA1e.top === 'thin', 'A1 应仍有外侧框线, 实际=' + borderStr('A1'));
+
+            // --- 测试 6：下框线 ---
+            log('action', '测试 6: A1:D4 设置下框线 (medium, #FF0000)');
+            doSetBorder('A1:D4', 'bottom', 'medium', '#FF0000');
+            log('info', '>>> 请目视确认 A1:D4 每个单元格底部有红色中线');
+            var bA1f = getCellBorder('A1');
+            assert(bA1f.bottom === 'medium', 'A1 应有 bottom=medium, 实际=' + bA1f.bottom);
+            assert(bA1f.start === 'thin', 'A1 应保留 start=thin(外侧), 实际=' + bA1f.start);
+            assert(bA1f.top === 'thin', 'A1 应保留 top=thin(外侧), 实际=' + bA1f.top);
+            var bB2f = getCellBorder('B2');
+            assert(bB2f.bottom === 'medium', 'B2 应有 bottom=medium, 实际=' + bB2f.bottom);
+            assert(bB2f.start === null, 'B2 应无 start, 实际=' + bB2f.start);
+
+            // --- 测试 7：撤销下框线 ---
+            log('undo', '测试 7: 撤销下框线（bottom 应恢复）');
+            doUndo();
+            var bA1g = getCellBorder('A1');
+            assert(bA1g.bottom === null, 'A1 应无 bottom, 实际=' + bA1g.bottom);
+
+            // --- 测试 8：上框线 + 下框线（top-bottom） ---
+            log('action', '测试 8: A1:D4 设置上下框线 (dashed, #0000FF)');
+            doSetBorder('A1:D4', 'top-bottom', 'dashed', '#0000FF');
+            log('info', '>>> 请目视确认 A1:D4 每个单元格上下有蓝色虚线');
+            var bC3h = getCellBorder('C3');
+            assert(bC3h.top === 'dashed' && bC3h.bottom === 'dashed', 'C3 应有 top+bottom=dashed, 实际=' + borderStr('C3'));
+
+            // --- 测试 9：撤销恢复，再测试无边框 ---
+            log('undo', '测试 9: 撤销上下框线');
+            doUndo();
+            log('action', '测试 9b: A1:D4 设置无边框 (none)');
+            doSetBorder('A1:D4', 'none', 'thin', '#000000');
+            var bA1i = getCellBorder('A1');
+            assert(bA1i.start === null && bA1i.end === null && bA1i.top === null && bA1i.bottom === null,
+                'A1 应全部 null, 实际=' + borderStr('A1'));
+            var bD4i = getCellBorder('D4');
+            assert(bD4i.start === null && bD4i.end === null, 'D4 应无边框, 实际=' + borderStr('D4'));
+
+            // --- 测试 10：撤销无边框，应恢复之前的边框 ---
+            log('undo', '测试 10: 撤销无边框（应恢复之前状态）');
+            doUndo();
+            log('info', '>>> 此时 Undo 栈应有多条记录，边框状态为撤销 none 后的状态');
+
+            // --- 测试 11：左框线 ---
+            log('action', '测试 11: B2:D3 设置左框线 (thick, #008000)');
+            doSetBorder('B2:D3', 'left', 'thick', '#008000');
+            log('info', '>>> 请目视确认 B2:D3 每个单元格左侧有绿色粗线');
+            var bB2k = getCellBorder('B2');
+            assert(bB2k.start === 'thick', 'B2 应有 start=thick, 实际=' + bB2k.start);
+            var bC2k = getCellBorder('C2');
+            assert(bC2k.start === 'thick', 'C2 应有 start=thick, 实际=' + bC2k.start);
+
+            // --- 测试 12：撤销 + 重做 ---
+            log('undo', '测试 12: 撤销左框线');
+            doUndo();
+            var bB2l = getCellBorder('B2');
+            assert(bB2l.start !== 'thick', 'B2 应无 start=thick, 实际=' + bB2l.start);
+            log('redo', '测试 12b: 重做左框线');
+            doRedo();
+            var bB2m = getCellBorder('B2');
+            assert(bB2m.start === 'thick', 'B2 应恢复 start=thick, 实际=' + bB2m.start);
+
+            log('action', '====== 边框测试序列结束 ======');
+            log('info', '最终状态: Undo栈=' + wbView.unDoRedo.GetUndoLength() +
+                ' Redo栈=' + wbView.unDoRedo.GetRedoLengt());
+            log('info', '提示：如所有 PASS 且目视效果正确，则边框功能正常');
+            log('info', '额外手动测试建议：');
+            log('info', '  1. 选中区域 → 工具栏边框按钮 → 选不同类型+线型+颜色');
+            log('info', '  2. Ctrl+Z 撤销 → Ctrl+Y 重做');
+            log('info', '  3. 先设外侧框线，再设下框线 → 撤销下框线 → 外侧框线应保留');
+        }
+    </script>
+</body>
+</html>

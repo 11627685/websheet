@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>MergeCommand 合并/拆分单元格 撤销/重做测试</title>
+    <script src="../dist/websheet.umd.js"></script>
+    <link rel="stylesheet" href="../dist/style.css">
+    <style>
+        body { margin: 0; font-family: Arial, sans-serif; }
+        #header {
+            padding: 10px 20px;
+            background: #f5f5f5;
+            border-bottom: 1px solid #ddd;
+        }
+        #header h1 { margin: 0 0 6px 0; font-size: 16px; }
+        #info {
+            font-size: 12px; color: #666;
+            padding: 4px 8px; background: #fff; border-radius: 4px;
+            display: inline-block;
+        }
+        #container {
+            width: 100%;
+            height: 500px;
+        }
+        #logPanel {
+            height: 260px;
+            overflow-y: auto;
+            background: #1e1e1e;
+            color: #d4d4d4;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            padding: 8px 12px;
+        }
+        .log-entry { margin: 2px 0; }
+        .log-action { color: #569cd6; }
+        .log-undo { color: #ce9178; }
+        .log-redo { color: #b5cea8; }
+        .log-info { color: #6a9955; }
+        .log-error { color: #f44747; }
+        .log-pass { color: #4ec9b0; font-weight: bold; }
+        .log-fail { color: #f44747; font-weight: bold; }
+        #testButtons {
+            padding: 8px 20px;
+            background: #fafafa;
+            border-bottom: 1px solid #ddd;
+        }
+        #testButtons button {
+            margin-right: 8px;
+            padding: 4px 12px;
+            font-size: 12px;
+            cursor: pointer;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            background: #fff;
+        }
+        #testButtons button:hover { background: #e8f0fe; }
+    </style>
+</head>
+<body>
+    <div id="header">
+        <h1>MergeCommand 合并/拆分单元格 撤销/重做测试</h1>
+        <span id="info">测试合并/拆分 Command 模式：合并 → 拆分 → 撤销 → 重做 → 连续操作</span>
+    </div>
+    <div id="testButtons">
+        <button onclick="runMergeTestSequence()">合并测试序列</button>
+        <button onclick="checkState()">检查当前状态</button>
+        <button onclick="clearLog()">清空日志</button>
+        <span style="font-size:12px;color:#666;margin-left:12px;">
+            手动测试：选中单元格 → 工具栏合并/拆分按钮 → Ctrl+Z 撤销 → Ctrl+Y 重做
+        </span>
+    </div>
+    <div id="container"></div>
+    <div id="logPanel"></div>
+
+    <script>
+        var logPanel = document.getElementById('logPanel');
+
+        function log(type, msg) {
+            var entry = document.createElement('div');
+            entry.className = 'log-entry log-' + type;
+            var time = new Date().toLocaleTimeString();
+            entry.textContent = '[' + time + '] ' + msg;
+            logPanel.appendChild(entry);
+            logPanel.scrollTop = logPanel.scrollHeight;
+        }
+
+        function clearLog() { logPanel.innerHTML = ''; }
+
+        // 初始化 WebSheet
+        websheet.ShowToolbar = true;
+        var container = document.getElementById('container');
+        var ws = new websheet('testId', container);
+
+        var wbView = ws.getWorkBookView();
+        var sheetView = wbView.getSheetView();
+        var activeSheet = ws.ActiveSheet();
+
+        // 填入测试数据
+        var testData = [
+            ['A1', '姓名'], ['B1', '年龄'], ['C1', '城市'], ['D1', '备注'],
+            ['A2', '张三'], ['B2', '25'],   ['C2', '上海'], ['D2', '员工'],
+            ['A3', '李四'], ['B3', '30'],   ['C3', '北京'], ['D3', '主管'],
+            ['A4', '王五'], ['B4', '28'],   ['C4', '广州'], ['D4', '经理'],
+            ['A5', '赵六'], ['B5', '35'],   ['C5', '深圳'], ['D5', '总监'],
+        ];
+
+        testData.forEach(function(item) {
+            var cell = new websheet.Model.Cell();
+            cell.r = item[0];
+            cell.v = item[1];
+            cell.s = 0;
+            activeSheet.SetCellValue(item[0], cell);
+        });
+
+        ws.BuildSheet();
+        ws.Draw();
+
+        log('info', 'WebSheet 初始化完成，测试数据已填入 A1:D5');
+        log('info', 'Undo栈长度: ' + wbView.unDoRedo.GetUndoLength());
+
+        // === 辅助函数 ===
+
+        // 检查指定 ref 是否在 mergeCells 中
+        function isMerged(ref) {
+            for (var i = 0; i < activeSheet.mergeCells.length; i++) {
+                if (activeSheet.mergeCells[i].ref === ref) return true;
+            }
+            return false;
+        }
+
+        // 获取 mergeCells 中所有 ref
+        function getAllMergeRefs() {
+            var refs = [];
+            for (var i = 0; i < activeSheet.mergeCells.length; i++) {
+                refs.push(activeSheet.mergeCells[i].ref);
+            }
+            return refs.length > 0 ? refs.join(', ') : '(空)';
+        }
+
+        function doUndo() {
+            wbView.unDoRedo.Undo();
+            ws.BuildSheet(); ws.Draw();
+        }
+
+        function doRedo() {
+            wbView.unDoRedo.Redo();
+            ws.BuildSheet(); ws.Draw();
+        }
+
+        function doMerge(range) {
+            sheetView.setActiveRange(range);
+            sheetView.SetCellMerge();
+            ws.BuildSheet(); ws.Draw();
+        }
+
+        function assert(condition, msg) {
+            if (condition) {
+                log('pass', '  PASS ' + msg);
+            } else {
+                log('fail', '  FAIL ' + msg);
+            }
+        }
+
+        function checkState() {
+            log('info', '=== 当前状态 ===');
+            log('info', 'Undo栈=' + wbView.unDoRedo.GetUndoLength() +
+                ' Redo栈=' + wbView.unDoRedo.GetRedoLengt());
+            log('info', 'mergeCells: ' + getAllMergeRefs());
+        }
+
+        // === 自动测试序列 ===
+
+        function runMergeTestSequence() {
+            clearLog();
+            log('action', '====== 开始合并/拆分自动测试序列（20 步） ======');
+
+            // ==================== 第一阶段：基础合并/拆分/撤销/重做 ====================
+
+            // --- 测试 1：合并 B2:D2 ---
+            log('action', '测试 1: 合并 B2:D2');
+            doMerge('B2:D2');
+            log('info', '>>> 请目视确认 B2:D2 已合并');
+            assert(isMerged('B2:D2'), 'B2:D2 应在 mergeCells 中');
+            assert(activeSheet.mergeCells.length === 1, 'mergeCells 长度应为 1, 实际=' + activeSheet.mergeCells.length);
+            assert(wbView.unDoRedo.GetUndoLength() === 1, 'Undo栈应为 1, 实际=' + wbView.unDoRedo.GetUndoLength());
+
+            // --- 测试 2：合并另一个区域 A4:C4 ---
+            log('action', '测试 2: 合并 A4:C4');
+            doMerge('A4:C4');
+            log('info', '>>> 请目视确认 A4:C4 已合并');
+            assert(isMerged('A4:C4'), 'A4:C4 应在 mergeCells 中');
+            assert(isMerged('B2:D2'), 'B2:D2 应仍在 mergeCells 中');
+            assert(activeSheet.mergeCells.length === 2, 'mergeCells 长度应为 2, 实际=' + activeSheet.mergeCells.length);
+            assert(wbView.unDoRedo.GetUndoLength() === 2, 'Undo栈应为 2, 实际=' + wbView.unDoRedo.GetUndoLength());
+
+            // --- 测试 3：撤销 A4:C4 合并 ---
+            log('undo', '测试 3: 撤销（A4:C4 应取消合并）');
+            doUndo();
+            log('info', '>>> 请目视确认 A4:C4 已取消合并');
+            assert(!isMerged('A4:C4'), 'A4:C4 应不在 mergeCells 中');
+            assert(isMerged('B2:D2'), 'B2:D2 应仍在 mergeCells 中');
+            assert(activeSheet.mergeCells.length === 1, 'mergeCells 长度应为 1, 实际=' + activeSheet.mergeCells.length);
+            assert(wbView.unDoRedo.GetRedoLengt() === 1, 'Redo栈应为 1, 实际=' + wbView.unDoRedo.GetRedoLengt());
+
+            // --- 测试 4：撤销 B2:D2 合并 ---
+            log('undo', '测试 4: 再次撤销（B2:D2 应取消合并）');
+            doUndo();
+            log('info', '>>> 请目视确认 B2:D2 已取消合并');
+            assert(!isMerged('B2:D2'), 'B2:D2 应不在 mergeCells 中');
+            assert(activeSheet.mergeCells.length === 0, 'mergeCells 长度应为 0, 实际=' + activeSheet.mergeCells.length);
+            assert(wbView.unDoRedo.GetUndoLength() === 0, 'Undo栈应为 0, 实际=' + wbView.unDoRedo.GetUndoLength());
+            assert(wbView.unDoRedo.GetRedoLengt() === 2, 'Redo栈应为 2, 实际=' + wbView.unDoRedo.GetRedoLengt());
+
+            // --- 测试 5：重做 B2:D2 合并 ---
+            log('redo', '测试 5: 重做（B2:D2 应恢复合并）');
+            doRedo();
+            log('info', '>>> 请目视确认 B2:D2 已恢复合并');
+            assert(isMerged('B2:D2'), 'B2:D2 应在 mergeCells 中');
+            assert(activeSheet.mergeCells.length === 1, 'mergeCells 长度应为 1, 实际=' + activeSheet.mergeCells.length);
+            assert(wbView.unDoRedo.GetUndoLength() === 1, 'Undo栈应为 1, 实际=' + wbView.unDoRedo.GetUndoLength());
+
+            // --- 测试 6：重做 A4:C4 合并 ---
+            log('redo', '测试 6: 再次重做（A4:C4 应恢复合并）');
+            doRedo();
+            log('info', '>>> 请目视确认 A4:C4 已恢复合并');
+            assert(isMerged('A4:C4'), 'A4:C4 应在 mergeCells 中');
+            assert(isMerged('B2:D2'), 'B2:D2 应仍在 mergeCells 中');
+            assert(activeSheet.mergeCells.length === 2, 'mergeCells 长度应为 2, 实际=' + activeSheet.mergeCells.length);
+
+            // ==================== 第二阶段：拆分 + undo/redo 循环 ====================
+
+            // --- 测试 7：拆分已合并的 B2:D2 ---
+            log('action', '测试 7: 拆分已合并的 B2:D2（点击合并按钮）');
+            doMerge('B2:D2');
+            log('info', '>>> 请目视确认 B2:D2 已拆分');
+            assert(!isMerged('B2:D2'), 'B2:D2 应不在 mergeCells 中');
+            assert(isMerged('A4:C4'), 'A4:C4 应仍在 mergeCells 中');
+            assert(activeSheet.mergeCells.length === 1, 'mergeCells 长度应为 1, 实际=' + activeSheet.mergeCells.length);
+            assert(wbView.unDoRedo.GetUndoLength() === 3, 'Undo栈应为 3, 实际=' + wbView.unDoRedo.GetUndoLength());
+
+            // --- 测试 8：撤销拆分，B2:D2 应恢复合并 ---
+            log('undo', '测试 8: 撤销拆分（B2:D2 应恢复合并）');
+            doUndo();
+            log('info', '>>> 请目视确认 B2:D2 已恢复合并');
+            assert(isMerged('B2:D2'), 'B2:D2 应在 mergeCells 中');
+            assert(isMerged('A4:C4'), 'A4:C4 应仍在 mergeCells 中');
+            assert(activeSheet.mergeCells.length === 2, 'mergeCells 长度应为 2, 实际=' + activeSheet.mergeCells.length);
+
+            // --- 测试 9：合并单单元格 A1 ---
+            log('action', '测试 9: 合并单个单元格 A1');
+            doMerge('A1');
+            log('info', '>>> 请目视确认 A1 已合并（单单元格合并）');
+            assert(isMerged('A1'), 'A1 应在 mergeCells 中');
+            assert(activeSheet.mergeCells.length === 3, 'mergeCells 长度应为 3, 实际=' + activeSheet.mergeCells.length);
+
+            // ==================== 第三阶段：undo/redo 循环验证 ====================
+
+            // --- 测试 10：完整 undo 回到初始状态 ---
+            log('undo', '测试 10: 连续撤销直到初始状态');
+            // undo 栈: [cmd1(merge B2:D2), cmd2(merge A4:C4), cmd4(merge A1)]
+            doUndo(); // 撤销 cmd4 (merge A1) → 移除 A1
+            assert(!isMerged('A1'), 'A1 应不在 mergeCells 中');
+            assert(isMerged('B2:D2'), 'B2:D2 应仍在 mergeCells 中');
+            assert(isMerged('A4:C4'), 'A4:C4 应仍在 mergeCells 中');
+            assert(activeSheet.mergeCells.length === 2, 'mergeCells 长度应为 2, 实际=' + activeSheet.mergeCells.length);
+
+            doUndo(); // 撤销 cmd2 (merge A4:C4) → 移除 A4:C4，恢复到 [B2:D2]
+            assert(isMerged('B2:D2'), 'B2:D2 应仍在 mergeCells 中');
+            assert(!isMerged('A4:C4'), 'A4:C4 应不在 mergeCells 中');
+            assert(activeSheet.mergeCells.length === 1, 'mergeCells 长度应为 1, 实际=' + activeSheet.mergeCells.length);
+
+            doUndo(); // 撤销 cmd1 (merge B2:D2) → 移除 B2:D2，恢复到 []
+            assert(!isMerged('B2:D2'), 'B2:D2 应不在 mergeCells 中');
+            assert(activeSheet.mergeCells.length === 0, 'mergeCells 长度应为 0, 实际=' + activeSheet.mergeCells.length);
+            assert(wbView.unDoRedo.GetUndoLength() === 0, 'Undo栈应为 0, 完全恢复初始状态');
+            assert(wbView.unDoRedo.GetRedoLengt() === 3, 'Redo栈应为 3, 实际=' + wbView.unDoRedo.GetRedoLengt());
+
+            // --- 测试 11：完整 redo 恢复全部合并 ---
+            log('redo', '测试 11: 连续重做恢复全部合并状态');
+            doRedo(); // redo cmd1 → B2:D2
+            assert(isMerged('B2:D2'), 'B2:D2 应恢复合并');
+            assert(activeSheet.mergeCells.length === 1, 'mergeCells 长度应为 1, 实际=' + activeSheet.mergeCells.length);
+
+            doRedo(); // redo cmd2 → A4:C4
+            assert(isMerged('A4:C4'), 'A4:C4 应恢复合并');
+            assert(isMerged('B2:D2'), 'B2:D2 应仍在 mergeCells 中');
+            assert(activeSheet.mergeCells.length === 2, 'mergeCells 长度应为 2, 实际=' + activeSheet.mergeCells.length);
+
+            doRedo(); // redo cmd4 → A1
+            assert(isMerged('A1'), 'A1 应恢复合并');
+            assert(activeSheet.mergeCells.length === 3, 'mergeCells 长度应为 3, 实际=' + activeSheet.mergeCells.length);
+            assert(wbView.unDoRedo.GetRedoLengt() === 0, 'Redo栈应为 0, 实际=' + wbView.unDoRedo.GetRedoLengt());
+
+            // --- 测试 12：undo/redo 循环（undo→redo→undo→redo 同一命令） ---
+            log('action', '测试 12: undo/redo 循环验证（同一命令反复撤销/重做）');
+            doUndo(); // undo A1
+            assert(!isMerged('A1'), 'A1 应不在 mergeCells 中');
+            assert(wbView.unDoRedo.GetUndoLength() === 2, 'Undo栈应为 2, 实际=' + wbView.unDoRedo.GetUndoLength());
+
+            doRedo(); // redo A1
+            assert(isMerged('A1'), 'A1 应恢复合并');
+            assert(wbView.unDoRedo.GetUndoLength() === 3, 'Undo栈应为 3, 实际=' + wbView.unDoRedo.GetUndoLength());
+
+            doUndo(); // undo A1 again
+            assert(!isMerged('A1'), 'A1 应不在 mergeCells 中');
+
+            doRedo(); // redo A1 again
+            assert(isMerged('A1'), 'A1 应恢复合并');
+            assert(activeSheet.mergeCells.length === 3, 'mergeCells 长度应为 3, 实际=' + activeSheet.mergeCells.length);
+            log('info', '循环验证通过：undo→redo→undo→redo 状态一致');
+
+            // ==================== 第四阶段：redo 栈清空验证 ====================
+
+            // --- 测试 13：undo 到中间状态后执行新操作，redo 栈应清空 ---
+            log('action', '测试 13: undo 到中间状态后新操作 → redo 栈应清空');
+            doUndo(); // undo A1 → undo栈=2, redo栈=1
+            doUndo(); // undo A4:C4 → undo栈=1, redo栈=2
+            assert(activeSheet.mergeCells.length === 1, 'mergeCells 长度应为 1（仅 B2:D2）, 实际=' + activeSheet.mergeCells.length);
+            assert(isMerged('B2:D2'), 'B2:D2 应仍在 mergeCells 中');
+            assert(wbView.unDoRedo.GetRedoLengt() === 2, 'Redo栈应为 2, 实际=' + wbView.unDoRedo.GetRedoLengt());
+
+            // 新操作：合并 A5:D5
+            log('info', '在中间状态执行新操作：合并 A5:D5');
+            doMerge('A5:D5');
+            assert(isMerged('A5:D5'), 'A5:D5 应在 mergeCells 中');
+            assert(isMerged('B2:D2'), 'B2:D2 应仍在 mergeCells 中');
+            assert(activeSheet.mergeCells.length === 2, 'mergeCells 长度应为 2, 实际=' + activeSheet.mergeCells.length);
+            assert(wbView.unDoRedo.GetRedoLengt() === 0, 'Redo栈应被清空为 0, 实际=' + wbView.unDoRedo.GetRedoLengt());
+            assert(wbView.unDoRedo.GetUndoLength() === 2, 'Undo栈应为 2, 实际=' + wbView.unDoRedo.GetUndoLength());
+
+            // --- 测试 14：此时 redo 应该无效（redo 栈已空） ---
+            log('redo', '测试 14: redo 栈已空，重做应无效');
+            doRedo();
+            assert(activeSheet.mergeCells.length === 2, 'mergeCells 长度应仍为 2, 实际=' + activeSheet.mergeCells.length);
+            assert(isMerged('A5:D5'), 'A5:D5 应仍在 mergeCells 中');
+            assert(wbView.unDoRedo.GetRedoLengt() === 0, 'Redo栈应仍为 0, 实际=' + wbView.unDoRedo.GetRedoLengt());
+
+            // ==================== 第五阶段：多区域交替操作 ====================
+
+            // --- 测试 15：拆分 B2:D2，同时保留其他合并 ---
+            log('action', '测试 15: 拆分 B2:D2（保留 A5:D5）');
+            doMerge('B2:D2'); // 已存在 → unmerge
+            log('info', '>>> 请目视确认 B2:D2 已拆分，A5:D5 仍合并');
+            assert(!isMerged('B2:D2'), 'B2:D2 应不在 mergeCells 中');
+            assert(isMerged('A5:D5'), 'A5:D5 应仍在 mergeCells 中');
+            assert(activeSheet.mergeCells.length === 1, 'mergeCells 长度应为 1, 实际=' + activeSheet.mergeCells.length);
+
+            // --- 测试 16：合并邻接区域 B2:D2（之前拆分过的重新合并） ---
+            log('action', '测试 16: 重新合并 B2:D2');
+            doMerge('B2:D2'); // 不存在 → merge
+            assert(isMerged('B2:D2'), 'B2:D2 应在 mergeCells 中');
+            assert(isMerged('A5:D5'), 'A5:D5 应仍在 mergeCells 中');
+            assert(activeSheet.mergeCells.length === 2, 'mergeCells 长度应为 2, 实际=' + activeSheet.mergeCells.length);
+
+            // --- 测试 17：合并第三个区域 C3:C3（单列单行） ---
+            log('action', '测试 17: 合并 C3（单单元格）');
+            doMerge('C3');
+            assert(isMerged('C3'), 'C3 应在 mergeCells 中');
+            assert(isMerged('B2:D2'), 'B2:D2 应仍在 mergeCells 中');
+            assert(isMerged('A5:D5'), 'A5:D5 应仍在 mergeCells 中');
+            assert(activeSheet.mergeCells.length === 3, 'mergeCells 长度应为 3, 实际=' + activeSheet.mergeCells.length);
+
+            // ==================== 第六阶段：全部撤销 + 最终验证 ====================
+
+            // --- 测试 18：连续 undo 撤销测试 17/16/15/13 → 回到 [B2:D2] ---
+            log('undo', '测试 18: 连续撤销 4 次回到 [B2:D2]');
+            doUndo(); // undo cmd17 (merge C3) → 移除 C3
+            assert(!isMerged('C3'), 'C3 应不在 mergeCells 中');
+            assert(activeSheet.mergeCells.length === 2, 'mergeCells 长度应为 2, 实际=' + activeSheet.mergeCells.length);
+
+            doUndo(); // undo cmd16 (merge B2:D2) → 移除 B2:D2
+            assert(!isMerged('B2:D2'), 'B2:D2 应不在 mergeCells 中');
+            assert(isMerged('A5:D5'), 'A5:D5 应仍在 mergeCells 中');
+            assert(activeSheet.mergeCells.length === 1, 'mergeCells 长度应为 1, 实际=' + activeSheet.mergeCells.length);
+
+            doUndo(); // undo cmd15 (unmerge B2:D2) → B2:D2 恢复合并
+            assert(isMerged('B2:D2'), 'B2:D2 应恢复合并');
+            assert(isMerged('A5:D5'), 'A5:D5 应仍在 mergeCells 中');
+            assert(activeSheet.mergeCells.length === 2, 'mergeCells 长度应为 2, 实际=' + activeSheet.mergeCells.length);
+
+            doUndo(); // undo cmd13 (merge A5:D5) → 移除 A5:D5
+            assert(!isMerged('A5:D5'), 'A5:D5 应不在 mergeCells 中');
+            assert(isMerged('B2:D2'), 'B2:D2 应仍在 mergeCells 中');
+            assert(activeSheet.mergeCells.length === 1, 'mergeCells 长度应为 1, 实际=' + activeSheet.mergeCells.length);
+
+            // --- 测试 19：继续 undo 回到初始状态 ---
+            log('undo', '测试 19: 继续撤销直到初始状态');
+            doUndo(); // undo cmd1 (merge B2:D2) → 移除 B2:D2
+            assert(!isMerged('B2:D2'), 'B2:D2 应不在 mergeCells 中');
+            assert(activeSheet.mergeCells.length === 0, 'mergeCells 长度应为 0, 实际=' + activeSheet.mergeCells.length);
+            assert(wbView.unDoRedo.GetUndoLength() === 0, 'Undo栈应为 0, 完全恢复初始状态');
+            assert(wbView.unDoRedo.GetRedoLengt() === 5, 'Redo栈应为 5, 实际=' + wbView.unDoRedo.GetRedoLengt());
+
+            // --- 测试 20：最终 redo 全部恢复 ---
+            log('redo', '测试 20: 全部 redo 恢复最终状态');
+            var redoCount = wbView.unDoRedo.GetRedoLengt();
+            log('info', 'Redo 栈长度=' + redoCount + '，逐个重做');
+            for (var i = 0; i < redoCount; i++) {
+                doRedo();
+            }
+            assert(wbView.unDoRedo.GetUndoLength() === redoCount, 'Undo栈应=' + redoCount + ', 实际=' + wbView.unDoRedo.GetUndoLength());
+            assert(wbView.unDoRedo.GetRedoLengt() === 0, 'Redo栈应为 0, 实际=' + wbView.unDoRedo.GetRedoLengt());
+            log('info', '最终 mergeCells: ' + getAllMergeRefs());
+
+            // 最后全部 undo 清理
+            var undoCount = wbView.unDoRedo.GetUndoLength();
+            for (var i = 0; i < undoCount; i++) {
+                doUndo();
+            }
+
+            log('action', '====== 合并/拆分测试序列结束（20 步） ======');
+            log('info', '最终状态: Undo栈=' + wbView.unDoRedo.GetUndoLength() +
+                ' Redo栈=' + wbView.unDoRedo.GetRedoLengt());
+            log('info', 'mergeCells: ' + getAllMergeRefs());
+            assert(activeSheet.mergeCells.length === 0, 'mergeCells 最终应为空');
+            assert(wbView.unDoRedo.GetUndoLength() === 0, 'Undo栈最终应为 0');
+            log('info', '提示：如所有 PASS 且目视效果正确，则合并/拆分功能正常');
+        }
+    </script>
+</body>
+</html>

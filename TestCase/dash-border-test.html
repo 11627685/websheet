@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>虚线边框 translate 策略测试 - 方案 A</title>
+    <script src="dist/websheet.umd.js"></script>
+    <link rel="stylesheet" href="dist/style.css">
+    <style>
+        body { margin: 0; font-family: Arial, sans-serif; }
+        #header {
+            padding: 10px 20px;
+            background: #f5f5f5;
+            border-bottom: 1px solid #ddd;
+        }
+        #header h1 { margin: 0 0 6px 0; font-size: 16px; }
+        #status {
+            font-size: 12px; color: #666;
+            padding: 4px 8px; background: #fff; border-radius: 4px;
+            display: inline-block;
+        }
+        #dprInfo {
+            font-size: 12px; color: #c0392b; font-weight: bold;
+            margin-left: 12px;
+        }
+        #container {
+            width: 100%;
+            height: calc(100vh - 80px);
+        }
+    </style>
+</head>
+<body>
+    <div id="header">
+        <h1>虚线边框 translate 策略测试 (方案 A)</h1>
+        <span id="status">方案 A: Flush 去掉全局 translate, DrawOneLine 仅实线 translate(0.5)</span>
+        <span id="dprInfo"></span>
+    </div>
+    <div id="container"></div>
+    <script>
+        document.getElementById('dprInfo').textContent =
+            'dpr=' + (window.devicePixelRatio || 1);
+
+        var sheet = new websheet.Sheet();
+        var doc = new websheet.DocumentXlsx();
+        var wb = doc.GetWorkbook();
+        var ws = wb.GetSheet('Sheet1') || wb.WorkSheetAdd('Sheet1');
+
+        function colLetter(n) {
+            return websheet.RowColTranslate.GetColAlphabetByColNumber(n);
+        }
+
+        function setCell(addr, value) {
+            var cell = ws.GetCellValue(addr) || new websheet.Cell();
+            cell.r = addr;
+            cell.v = value;
+            cell.s = 0;
+            ws.SetCellValue(addr, cell);
+            return cell;
+        }
+
+        function setBorder(addr, borders) {
+            var cell = ws.GetCellValue(addr);
+            if (!cell) { cell = setCell(addr, ''); }
+            if (!cell.xf) cell.xf = {};
+            cell.xf.applyBorder = true;
+            cell.xf.border = borders;
+        }
+
+        function bp(style) {
+            return { borderStyle: style, color: { auto: true } };
+        }
+
+        var COLS = 6;  // A-F
+
+        // ── 场景定义 ──
+        // 每组 2 行, 第一行设 bottom, 第二行设 top, 验证共边对齐
+
+        // 1-2 行: 实线 thin
+        for (var r = 1; r <= 2; r++) {
+            for (var c = 0; c < COLS; c++) {
+                var addr = colLetter(c) + r;
+                setCell(addr, r === 1 ? 'thin 实线' : '');
+                setBorder(addr, {
+                    start: bp('thin'), top: bp('thin'),
+                    end: bp('thin'), bottom: bp('thin')
+                });
+            }
+        }
+
+        // 3-4 行: hair 虚线
+        for (var r = 3; r <= 4; r++) {
+            for (var c = 0; c < COLS; c++) {
+                var addr = colLetter(c) + r;
+                setCell(addr, r === 3 ? 'hair [1,1]' : '');
+                setBorder(addr, {
+                    start: bp('hair'), top: bp('hair'),
+                    end: bp('hair'), bottom: bp('hair')
+                });
+            }
+        }
+
+        // 5-6 行: dashed 虚线
+        for (var r = 5; r <= 6; r++) {
+            for (var c = 0; c < COLS; c++) {
+                var addr = colLetter(c) + r;
+                setCell(addr, r === 5 ? 'dashed [4,2]' : '');
+                setBorder(addr, {
+                    start: bp('dashed'), top: bp('dashed'),
+                    end: bp('dashed'), bottom: bp('dashed')
+                });
+            }
+        }
+
+        // 7-8 行: dotted 虚线
+        for (var r = 7; r <= 8; r++) {
+            for (var c = 0; c < COLS; c++) {
+                var addr = colLetter(c) + r;
+                setCell(addr, r === 7 ? 'dotted [2,2]' : '');
+                setBorder(addr, {
+                    start: bp('dotted'), top: bp('dotted'),
+                    end: bp('dotted'), bottom: bp('dotted')
+                });
+            }
+        }
+
+        // 9-10 行: dashDot 虚线
+        for (var r = 9; r <= 10; r++) {
+            for (var c = 0; c < COLS; c++) {
+                var addr = colLetter(c) + r;
+                setCell(addr, r === 9 ? 'dashDot' : '');
+                setBorder(addr, {
+                    start: bp('dashDot'), top: bp('dashDot'),
+                    end: bp('dashDot'), bottom: bp('dashDot')
+                });
+            }
+        }
+
+        // 11 行: top=thin, bottom=dashed (混合共边)
+        for (var c = 0; c < COLS; c++) {
+            var addr = colLetter(c) + '11';
+            setCell(addr, 'top=thin bot=dashed');
+            setBorder(addr, {
+                start: bp('thin'), top: bp('thin'),
+                end: bp('thin'), bottom: bp('dashed')
+            });
+        }
+
+        // 12 行: top=dashed, bottom=thin (混合共边)
+        for (var c = 0; c < COLS; c++) {
+            var addr = colLetter(c) + '12';
+            setCell(addr, 'top=dashed bot=thin');
+            setBorder(addr, {
+                start: bp('thin'), top: bp('dashed'),
+                end: bp('thin'), bottom: bp('thin')
+            });
+        }
+
+        // 13 行: 只有 top=dashed, 无 bottom
+        for (var c = 0; c < COLS; c++) {
+            var addr = colLetter(c) + '13';
+            setCell(addr, 'top=dashed only');
+            setBorder(addr, {
+                start: bp('thin'), top: bp('dashed'),
+                end: bp('thin')
+            });
+        }
+
+        // 14 行: 只有 bottom=dashed, 无 top
+        for (var c = 0; c < COLS; c++) {
+            var addr = colLetter(c) + '14';
+            setCell(addr, 'bot=dashed only');
+            setBorder(addr, {
+                start: bp('thin'),
+                end: bp('thin'), bottom: bp('dashed')
+            });
+        }
+
+        // 15 行: 只有 top=hair, 无 bottom
+        for (var c = 0; c < COLS; c++) {
+            var addr = colLetter(c) + '15';
+            setCell(addr, 'top=hair only');
+            setBorder(addr, {
+                start: bp('thin'), top: bp('hair'),
+                end: bp('thin')
+            });
+        }
+
+        // 16 行: 只有 bottom=hair, 无 top
+        for (var c = 0; c < COLS; c++) {
+            var addr = colLetter(c) + '16';
+            setCell(addr, 'bot=hair only');
+            setBorder(addr, {
+                start: bp('thin'),
+                end: bp('thin'), bottom: bp('hair')
+            });
+        }
+
+        // 渲染
+        var websheetControl = new websheet.WebSheet(
+            'container', null, 0, 0,
+            window.innerWidth, window.innerHeight - 80
+        );
+        websheetControl.SetDocument(doc);
+    </script>
+</body>
+</html>

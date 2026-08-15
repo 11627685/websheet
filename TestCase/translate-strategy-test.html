@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>边框 translate 策略对比测试</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, "Segoe UI", sans-serif; background: #f5f5f5; padding: 20px; }
+h1 { font-size: 18px; margin-bottom: 8px; }
+.info { background: #fff; padding: 12px 16px; border-radius: 8px; margin-bottom: 16px; font-size: 14px; line-height: 1.8; }
+.info code { background: #e8e8e8; padding: 2px 6px; border-radius: 4px; font-size: 13px; }
+.info .dpr-val { font-weight: bold; color: #c0392b; font-size: 16px; }
+.row { display: flex; gap: 20px; margin-bottom: 16px; }
+.col { flex: 1; background: #fff; border-radius: 8px; padding: 16px; }
+.col h2 { font-size: 15px; margin-bottom: 4px; }
+.col .desc { font-size: 12px; color: #888; margin-bottom: 12px; }
+.col.bad h2 { color: #c0392b; }
+.col.good h2 { color: #27ae60; }
+canvas { display: block; border: 1px solid #ddd; }
+.legend { font-size: 12px; color: #666; margin-top: 10px; line-height: 1.6; }
+.legend span { display: inline-block; margin-right: 16px; }
+.legend .swatch { display: inline-block; width: 20px; height: 2px; vertical-align: middle; margin-right: 4px; }
+.note { background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; padding: 12px 16px; font-size: 13px; line-height: 1.6; margin-top: 16px; }
+</style>
+</head>
+<body>
+
+<h1>边框 translate 策略对比测试</h1>
+
+<div class="info">
+  当前屏幕 <code>window.devicePixelRatio</code> = <span class="dpr-val" id="dprDisplay">?</span><br>
+  左侧使用<strong>旧策略</strong>（全局 <code>translate(0.5, 0.5)</code>），右侧使用<strong>新策略</strong>（仅实线 <code>translate(0.5, 0.5)</code>，虚线不偏移）。<br>
+  在 dpr=1 屏幕上：左侧 hair/dotted 虚线会变成实线，右侧保持清晰。在 dpr=2 屏幕上两侧都正常。
+</div>
+
+<div class="row">
+  <div class="col bad">
+    <h2>旧策略：全局 translate(0.5, 0.5)</h2>
+    <div class="desc">Flush / drawImmediate 中全局 translate，实线虚线共用</div>
+    <canvas id="canvasOld"></canvas>
+  </div>
+  <div class="col good">
+    <h2>新策略：仅实线 translate(0.5, 0.5)</h2>
+    <div class="desc">DrawOneLine 内部判断，虚线不 translate</div>
+    <canvas id="canvasNew"></canvas>
+  </div>
+</div>
+
+<div class="legend">
+  <span><span class="swatch" style="background:#000;"></span>thin 实线 (1px)</span>
+  <span><span class="swatch" style="background:#000; border-top:1px dashed #000;"></span>hair 虚线 [1,1]</span>
+  <span><span class="swatch" style="background:#000; border-top:1px dashed #000;width:30px;"></span>dashed 虚线 [4,2]</span>
+  <span><span class="swatch" style="background:repeating-linear-gradient(90deg,#000 0 2px,transparent 2px 4px);height:2px;"></span>dotted 虚线 [2,2]</span>
+</div>
+
+<div class="note">
+  <strong>验证要点：</strong><br>
+  1. 实线边框在两侧都应该锐利（无模糊）<br>
+  2. 虚线边框在右侧（新策略）应该清晰可见，在左侧（旧策略）在 dpr=1 屏幕上会变成实线<br>
+  3. top 和 bottom 共边应该完全对齐（第 5 行混合区域）<br>
+  4. 把此页面拖到不同 dpr 的屏幕上，对比左右差异
+</div>
+
+<script>
+(function () {
+  const dpr = window.devicePixelRatio || 1;
+  document.getElementById('dprDisplay').textContent = dpr;
+
+  // ── 配置 ──
+  const CELL = 60;        // 每个 cell 的 CSS 像素尺寸
+  const COLS = 5;
+  const ROWS = 6;
+  const CSS_W = CELL * COLS;
+  const CSS_H = CELL * ROWS;
+
+  // ── 边框样式定义 ──
+  // 每行: { top, bottom, left, right } 各自 { style, width, dash }
+  const THIN   = { width: 1, dash: null };        // 实线 1px
+  const HAIR   = { width: 1, dash: [1, 1] };      // hair 虚线
+  const DASHED = { width: 1, dash: [4, 2] };      // dashed 虚线
+  const DOTTED = { width: 1, dash: [2, 2] };      // dotted 虚线
+  const NONE   = null;
+
+  const grid = [
+    // 第 1 行: 全实线
+    { label: 'thin',   top: THIN,   bottom: THIN,   left: THIN,   right: THIN },
+    // 第 2 行: 全 hair
+    { label: 'hair',   top: HAIR,   bottom: HAIR,   left: HAIR,   right: HAIR },
+    // 第 3 行: 全 dashed
+    { label: 'dashed', top: DASHED, bottom: DASHED, left: DASHED, right: DASHED },
+    // 第 4 行: 全 dotted
+    { label: 'dotted', top: DOTTED, bottom: DOTTED, left: DOTTED, right: DOTTED },
+    // 第 5 行: 混合 - top 实线, bottom 虚线, left/right 实线
+    { label: 'mixed',  top: THIN,   bottom: DASHED, left: THIN,   right: THIN },
+    // 第 6 行: 只有 top 边框 (模拟合计行), 无 bottom
+    { label: 'topOnly', top: DASHED, bottom: NONE,  left: THIN,   right: THIN },
+  ];
+
+  // ── 初始化 canvas ──
+  function setupCanvas(canvas) {
+    canvas.width = CSS_W * dpr;
+    canvas.height = CSS_H * dpr;
+    canvas.style.width = CSS_W + 'px';
+    canvas.style.height = CSS_H + 'px';
+    const ctx = canvas.getContext('2d');
+    ctx.scale(dpr, dpr);   // 模拟 WebSheet 的 ctx.scale(ratio, ratio)
+    return ctx;
+  }
+
+  // ── 画一条边 ──
+  // strategy: 'old' = 全局 translate(0.5); 'new' = 仅实线 translate(0.5)
+  function drawEdge(ctx, x, y, w, h, type, borderDef, strategy) {
+    if (!borderDef) return;
+    ctx.save();
+    ctx.lineWidth = borderDef.width;
+    ctx.strokeStyle = '#333';
+    if (borderDef.dash) {
+      ctx.setLineDash(borderDef.dash);
+    } else {
+      ctx.setLineDash([]);
+    }
+
+    // 核心差异：新策略仅实线 translate
+    var isDashed = !!borderDef.dash;
+    if (strategy === 'new' && !isDashed) {
+      ctx.translate(0.5, 0.5);
+    }
+    // 旧策略的 translate 已在全局设置，这里不再设置
+
+    ctx.beginPath();
+    if (type === 'top') {
+      ctx.moveTo(x, y);
+      ctx.lineTo(x + w, y);
+    } else if (type === 'bottom') {
+      ctx.moveTo(x, y + h);
+      ctx.lineTo(x + w, y + h);
+    } else if (type === 'left') {
+      ctx.moveTo(x, y);
+      ctx.lineTo(x, y + h);
+    } else if (type === 'right') {
+      ctx.moveTo(x + w, y);
+      ctx.lineTo(x + w, y + h);
+    }
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // ── 画整个网格 ──
+  function drawGrid(canvas, strategy) {
+    var ctx = setupCanvas(canvas);
+
+    // 背景
+    ctx.fillStyle = '#fafafa';
+    ctx.fillRect(0, 0, CSS_W, CSS_H);
+
+    // 旧策略：全局 translate
+    if (strategy === 'old') {
+      ctx.translate(0.5, 0.5);
+    }
+    // 新策略：不全局 translate，由 drawEdge 内部按线型决定
+
+    // 画每个 cell 的 4 条边
+    for (var r = 0; r < ROWS; r++) {
+      for (var c = 0; c < COLS; c++) {
+        var x = c * CELL;
+        var y = r * CELL;
+        var row = grid[r];
+        drawEdge(ctx, x, y, CELL, CELL, 'top',    row.top,    strategy);
+        drawEdge(ctx, x, y, CELL, CELL, 'bottom', row.bottom, strategy);
+        drawEdge(ctx, x, y, CELL, CELL, 'left',   row.left,   strategy);
+        drawEdge(ctx, x, y, CELL, CELL, 'right',  row.right,  strategy);
+      }
+    }
+
+    // 行标签 (画在 canvas 上，不受 translate 影响 — 因为已经 restore)
+    ctx.save();
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#999';
+    ctx.font = '10px sans-serif';
+    ctx.textAlign = 'right';
+    for (var r = 0; r < ROWS; r++) {
+      ctx.fillText(grid[r].label, COLS * CELL - 2, r * CELL + 12);
+    }
+    ctx.restore();
+  }
+
+  // ── 渲染 ──
+  drawGrid(document.getElementById('canvasOld'), 'old');
+  drawGrid(document.getElementById('canvasNew'), 'new');
+})();
+</script>
+
+</body>
+</html>

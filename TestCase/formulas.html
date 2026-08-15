@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <title>WebSheet 公式测试</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f5f5f5;
+      padding: 20px;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+      color: #333;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    .websheet-wrapper {
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+
+    #websheetContainer {
+      width: 100%;
+      height: 500px;
+    }
+
+    .formula-tests {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+      gap: 16px;
+    }
+
+    .formula-card {
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      padding: 16px;
+      border-left: 4px solid #4CAF50;
+    }
+
+    .formula-card.category-stat {
+      border-left-color: #2196F3;
+    }
+
+    .formula-card.category-math {
+      border-left-color: #FF9800;
+    }
+
+    .formula-card.category-text {
+      border-left-color: #9C27B0;
+    }
+
+    .formula-card.category-date {
+      border-left-color: #00BCD4;
+    }
+
+    .formula-card.category-logic {
+      border-left-color: #E91E63;
+    }
+
+    .formula-card.category-lookup {
+      border-left-color: #795548;
+    }
+
+    .formula-card h3 {
+      font-size: 14px;
+      color: #666;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .formula-card .result {
+      font-size: 20px;
+      font-weight: bold;
+      color: #333;
+      margin: 8px 0;
+      min-height: 28px;
+    }
+
+    .formula-card .formula {
+      background: #f5f5f5;
+      padding: 8px 12px;
+      border-radius: 4px;
+      font-family: 'Consolas', 'Monaco', monospace;
+      font-size: 13px;
+      color: #333;
+    }
+
+    .formula-card .desc {
+      font-size: 12px;
+      color: #999;
+      margin-top: 4px;
+    }
+
+    .status {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: bold;
+    }
+
+    .status.pass {
+      background: #E8F5E9;
+      color: #2E7D32;
+    }
+
+    .status.fail {
+      background: #FFEBEE;
+      color: #C62828;
+    }
+
+    .summary {
+      text-align: center;
+      padding: 16px;
+      background: #fff;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    }
+
+    .summary .count {
+      font-size: 32px;
+      font-weight: bold;
+      color: #4CAF50;
+    }
+
+    .summary .label {
+      font-size: 14px;
+      color: #666;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h1>WebSheet 公式功能测试</h1>
+
+    <div class="summary">
+      <div class="count" id="totalCount">0</div>
+      <div class="label">测试用例总数</div>
+    </div>
+
+    <div class="websheet-wrapper">
+      <div id="websheetContainer"></div>
+    </div>
+
+    <div class="formula-tests" id="testResults"></div>
+  </div>
+
+  <script src="./dist/crypto-js.min.js"></script>
+  <script src="./dist/jsrsasign-all-min.js"></script>
+  <script type="text/javascript" src="./dist/xmlbuilder2.min.js"></script>
+  <script type="text/javascript" src="./dist/websheet.umd.js"></script>
+
+  <script type="module">
+    // 初始化 WebSheet
+    const container = document.getElementById("websheetContainer");
+    const wsheet = new websheet('HTML', container, 0, 0, container.clientWidth, 500);
+    const activeSheet = wsheet.ActiveSheet();
+
+    // ===== 设置测试数据 =====
+
+    // 原始数据 (A1:C10)
+    activeSheet.SetCellValue('A1', '数值');
+    activeSheet.SetCellValue('B1', '文本');
+    activeSheet.SetCellValue('C1', '日期');
+
+    activeSheet.SetCellValue('A2', 10);
+    activeSheet.SetCellValue('A3', 20);
+    activeSheet.SetCellValue('A4', 30);
+    activeSheet.SetCellValue('A5', 40);
+    activeSheet.SetCellValue('A6', 50);
+    activeSheet.SetCellValue('A7', 25);
+    activeSheet.SetCellValue('A8', 15);
+    activeSheet.SetCellValue('A9', ''); // 空值
+    activeSheet.SetCellValue('A10', 10);
+
+    activeSheet.SetCellValue('B2', 'Hello');
+    activeSheet.SetCellValue('B3', 'WebSheet');
+    activeSheet.SetCellValue('B4', ''); // 空值
+    activeSheet.SetCellValue('B5', 'Excel');
+    activeSheet.SetCellValue('B6', 'Formula');
+    activeSheet.SetCellValue('B7', 'Test');
+    activeSheet.SetCellValue('B8', '123');
+    activeSheet.SetCellValue('B9', 'world');
+    activeSheet.SetCellValue('B10', '');
+
+    activeSheet.SetCellValue('C2', '2024-01-15');
+    activeSheet.SetCellValue('C3', '2024-06-20');
+    activeSheet.SetCellValue('C4', '');
+
+    // 设置列宽
+    activeSheet.setColWidth(1, 100);
+    activeSheet.setColWidth(2, 120);
+    activeSheet.setColWidth(3, 120);
+
+    // ===== 公式测试区域 (E列和F列) =====
+    // E列: 公式描述, F列: 公式结果
+
+    const formulas = [
+      // 统计函数
+      { category: '统计', name: 'SUM', formula: '=SUM(A2:A10)', expected: '200', desc: '求和 A2:A10' },
+      { category: '统计', name: 'AVERAGE', formula: '=AVERAGE(A2:A10)', expected: '25', desc: '平均值 A2:A10' },
+      { category: '统计', name: 'COUNT', formula: '=COUNT(A2:A10)', expected: '8', desc: '计数数字单元格' },
+      { category: '统计', name: 'COUNTA', formula: '=COUNTA(A2:A10)', expected: '8', desc: '计数非空单元格' },
+      { category: '统计', name: 'COUNTBLANK', formula: '=COUNTBLANK(A2:A10)', expected: '1', desc: '计数空单元格' },
+      { category: '统计', name: 'MAX', formula: '=MAX(A2:A10)', expected: '50', desc: '最大值' },
+      { category: '统计', name: 'MIN', formula: '=MIN(A2:A10)', expected: '10', desc: '最小值' },
+      { category: '统计', name: 'COUNTIF', formula: '=COUNTIF(A2:A10,">20")', expected: '4', desc: '条件计数 >20' },
+      { category: '统计', name: 'SUMIF', formula: '=SUMIF(A2:A10,">=30")', expected: '120', desc: '条件求和 >=30' },
+
+      // 数学函数
+      { category: '数学', name: 'ABS', formula: '=ABS(-25)', expected: '25', desc: '绝对值' },
+      { category: '数学', name: 'ROUND', formula: '=ROUND(3.14159,2)', expected: '3.14', desc: '四舍五入 2位小数' },
+      { category: '数学', name: 'INT', formula: '=INT(3.7)', expected: '3', desc: '向下取整' },
+      { category: '数学', name: 'SQRT', formula: '=SQRT(144)', expected: '12', desc: '平方根' },
+      { category: '数学', name: 'POWER', formula: '=POWER(2,10)', expected: '1024', desc: '幂运算 2^10' },
+      { category: '数学', name: 'MOD', formula: '=MOD(17,5)', expected: '2', desc: '取余数' },
+      { category: '数学', name: 'CEILING', formula: '=CEILING(3.2,1)', expected: '4', desc: '向上舍入到倍数' },
+      { category: '数学', name: 'FLOOR', formula: '=FLOOR(3.7,1)', expected: '3', desc: '向下舍入到倍数' },
+      { category: '数学', name: 'ROUNDUP', formula: '=ROUNDUP(3.141,2)', expected: '3.15', desc: '向上舍入' },
+      { category: '数学', name: 'ROUNDDOWN', formula: '=ROUNDDOWN(3.149,2)', expected: '3.14', desc: '向下舍入' },
+      { category: '数学', name: 'PRODUCT', formula: '=PRODUCT(2,3,4)', expected: '24', desc: '连乘积' },
+      { category: '数学', name: 'LARGE', formula: '=LARGE(A2:A10,2)', expected: '40', desc: '第2大值' },
+      { category: '数学', name: 'SMALL', formula: '=SMALL(A2:A10,2)', expected: '10', desc: '第2小值' },
+
+      // 文本函数
+      { category: '文本', name: 'LEN', formula: '=LEN(B2)', expected: '5', desc: '文本长度 Hello' },
+      { category: '文本', name: 'LEFT', formula: '=LEFT(B2,2)', expected: 'He', desc: '左侧截取2字符' },
+      { category: '文本', name: 'RIGHT', formula: '=RIGHT(B2,2)', expected: 'lo', desc: '右侧截取2字符' },
+      { category: '文本', name: 'MID', formula: '=MID(B2,2,3)', expected: 'ell', desc: '中间截取' },
+      { category: '文本', name: 'UPPER', formula: '=UPPER(B2)', expected: 'HELLO', desc: '转大写' },
+      { category: '文本', name: 'LOWER', formula: '=LOWER(B3)', expected: 'websheet', desc: '转小写' },
+      { category: '文本', name: 'SUBSTITUTE', formula: '=SUBSTITUTE(B2,"l","L")', expected: 'HeLLo', desc: '替换字符' },
+
+      // 日期函数
+      { category: '日期', name: 'TODAY', formula: '=TODAY()', expected: 'today', desc: '当前日期' },
+      { category: '日期', name: 'YEAR', formula: '=YEAR(C2)', expected: 'year', desc: '提取年份' },
+      { category: '日期', name: 'MONTH', formula: '=MONTH(C2)', expected: 'month', desc: '提取月份' },
+      { category: '日期', name: 'DAY', formula: '=DAY(C2)', expected: 'day', desc: '提取日期' },
+
+      // 逻辑函数
+      { category: '逻辑', name: 'AND', formula: '=AND(A2>5,A2<100)', expected: 'TRUE', desc: '逻辑与' },
+      { category: '逻辑', name: 'OR', formula: '=OR(A2>100,A2>5)', expected: 'TRUE', desc: '逻辑或' },
+      { category: '逻辑', name: 'NOT', formula: '=NOT(A2>100)', expected: 'TRUE', desc: '逻辑非' },
+      { category: '逻辑', name: 'ISBLANK', formula: '=ISBLANK(A9)', expected: 'TRUE', desc: '判断空值' },
+      { category: '逻辑', name: 'IF', formula: '=IF(A2>15,"大","小")', expected: '小', desc: '条件判断' },
+
+      // 查找函数
+      { category: '查找', name: 'CHOOSE', formula: '=CHOOSE(2,"第一","第二","第三")', expected: '第二', desc: '按索引选择' },
+    ];
+
+    // 设置公式
+    let row = 2;
+    const testResults = [];
+
+    formulas.forEach((item, index) => {
+      const formulaCell = 'F' + (index + 2);
+      const descCell = 'E' + (index + 2);
+
+      activeSheet.SetCellValue(descCell, item.name + ': ' + item.desc);
+      activeSheet.SetCellValue(formulaCell, item.formula);
+
+      testResults.push({
+        ...item,
+        cell: formulaCell,
+        row: index + 2
+      });
+    });
+
+    // 计算所有公式
+    setTimeout(() => {
+      // 必须先调用 WorkFormula() 来构建公式依赖关系
+      activeSheet.WorkFormula();
+      // 再计算所有公式
+      activeSheet.cacl();
+      // 重绘
+      wsheet.BuildSheet();
+      wsheet.Draw();
+
+      // 显示测试结果
+      displayResults();
+    }, 500);
+
+    function displayResults() {
+      const resultsDiv = document.getElementById('testResults');
+      document.getElementById('totalCount').textContent = testResults.length;
+
+      const categoryClasses = {
+        '统计': 'category-stat',
+        '数学': 'category-math',
+        '文本': 'category-text',
+        '日期': 'category-date',
+        '逻辑': 'category-logic',
+        '查找': 'category-lookup'
+      };
+
+      testResults.forEach((item) => {
+        const cell = activeSheet.GetCellValue(item.cell);
+        let actualValue = cell?.value ?? '#ERROR!';
+        let actualDisplay = actualValue;
+
+        // 判断是否通过
+        let isPass = false;
+        if (typeof actualValue === 'string' && actualValue.includes('#')) {
+          isPass = false;
+        } else if (item.name === 'TODAY') {
+          isPass = actualValue !== undefined && actualValue !== null && actualValue !== '#NAME?' && actualValue !== '#NUM!' && actualValue !== '#VALUE!';
+          item.expected = '日期序列号';
+        } else if (item.name === 'YEAR') {
+          isPass = actualValue !== undefined && actualValue !== null && actualValue !== '#NAME?' && actualValue !== '#NUM!' && actualValue !== '#VALUE!';
+          item.expected = '年份值';
+        } else if (item.name === 'MONTH') {
+          isPass = actualValue !== undefined && actualValue !== null && actualValue !== '#NAME?' && actualValue !== '#NUM!' && actualValue !== '#VALUE!';
+          item.expected = '月份值';
+        } else if (item.name === 'DAY') {
+          isPass = actualValue !== undefined && actualValue !== null && actualValue !== '#NAME?' && actualValue !== '#NUM!' && actualValue !== '#VALUE!';
+          item.expected = '日期值';
+        } else {
+          isPass = String(actualValue) === String(item.expected);
+        }
+
+        const card = document.createElement('div');
+        card.className = `formula-card ${categoryClasses[item.category] || ''}`;
+        card.innerHTML = `
+          <h3>${item.category}函数 - ${item.name}</h3>
+          <div class="result">${actualDisplay} <span class="status ${isPass ? 'pass' : 'fail'}">${isPass ? '通过' : '失败'}</span></div>
+          <div class="formula">${item.formula}</div>
+          <div class="desc">${item.desc}</div>
+        `;
+        resultsDiv.appendChild(card);
+      });
+    }
+  </script>
+</body>
+
+</html>

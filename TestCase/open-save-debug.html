@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WebSheet 打开导出链路埋点测试</title>
+  <link rel="stylesheet" href="./dist/style.css">
+  <style>
+    :root {
+      color-scheme: light;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: #1f2937;
+      background: #f3f4f6;
+    }
+
+    body {
+      margin: 0;
+      padding: 20px;
+    }
+
+    .page {
+      max-width: 1440px;
+      margin: 0 auto;
+    }
+
+    .toolbar,
+    .panel {
+      background: #fff;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      padding: 14px;
+      margin-bottom: 14px;
+    }
+
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    button,
+    input[type="file"] {
+      font: inherit;
+    }
+
+    button {
+      border: 1px solid #9ca3af;
+      border-radius: 4px;
+      background: #fff;
+      padding: 7px 12px;
+      cursor: pointer;
+    }
+
+    button:disabled {
+      cursor: not-allowed;
+      opacity: 0.5;
+    }
+
+    .hint {
+      color: #6b7280;
+      font-size: 13px;
+    }
+
+    .status {
+      min-height: 20px;
+      color: #374151;
+      font-size: 14px;
+    }
+
+    .content {
+      display: grid;
+      grid-template-columns: minmax(460px, 1fr) minmax(460px, 1fr);
+      gap: 14px;
+    }
+
+    .panel h2 {
+      font-size: 16px;
+      margin: 0 0 10px;
+    }
+
+    #sheet-host {
+      min-height: 420px;
+      border: 1px solid #e5e7eb;
+      overflow: hidden;
+    }
+
+    #roundtrip-host {
+      position: absolute;
+      left: -10000px;
+      top: -10000px;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+    }
+
+    pre {
+      margin: 0;
+      max-height: 520px;
+      overflow: auto;
+      background: #111827;
+      color: #e5e7eb;
+      border-radius: 4px;
+      padding: 12px;
+      font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .result {
+      margin-top: 10px;
+      padding: 10px;
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+      border-radius: 4px;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    @media (max-width: 980px) {
+      .content {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <main class="page">
+    <div class="toolbar">
+      <input id="file-input" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
+      <button id="export-button" type="button" disabled>导出并分析</button>
+      <button id="download-button" type="button" disabled>下载最近导出文件</button>
+      <button id="clear-button" type="button">清空日志</button>
+      <span class="hint">选择本地 xlsx 后先观察打开结果，再点击“导出并分析”。</span>
+    </div>
+
+    <div id="status" class="status">等待选择文件。</div>
+
+    <div class="content">
+      <section class="panel">
+        <h2>控件展示</h2>
+        <div id="sheet-host"></div>
+        <div id="roundtrip-result" class="result">尚未回导入。</div>
+      </section>
+
+      <section class="panel">
+        <h2>埋点日志</h2>
+        <pre id="log"></pre>
+      </section>
+    </div>
+
+    <div id="roundtrip-host"></div>
+  </main>
+
+  <script src="../node_modules/jszip/dist/jszip.min.js"></script>
+  <script src="./dist/crypto-js.min.js"></script>
+  <script src="./dist/jsrsasign-all-min.js"></script>
+  <script src="./dist/xmlbuilder2.min.js"></script>
+  <script src="./dist/websheet.umd.js"></script>
+
+  <script>
+    (() => {
+      const fileInput = document.getElementById('file-input');
+      const exportButton = document.getElementById('export-button');
+      const downloadButton = document.getElementById('download-button');
+      const clearButton = document.getElementById('clear-button');
+      const status = document.getElementById('status');
+      const logElement = document.getElementById('log');
+      const sheetHost = document.getElementById('sheet-host');
+      const roundtripHost = document.getElementById('roundtrip-host');
+      const roundtripResult = document.getElementById('roundtrip-result');
+
+      let sourceInstance = null;
+      let roundtripInstance = null;
+      let sourceFile = null;
+      let latestExportBlob = null;
+
+      function log(title, value) {
+        const line = `[${new Date().toISOString()}] ${title}`;
+        const detail = typeof value === 'string' ? value : JSON.stringify(value, null, 2);
+        logElement.textContent += `${line}\n${detail}\n\n`;
+        logElement.scrollTop = logElement.scrollHeight;
+      }
+
+      function setStatus(text, isError) {
+        status.textContent = text;
+        status.style.color = isError ? '#b91c1c' : '#374151';
+      }
+
+      function isNonEmptyCell(cell) {
+        return cell && (
+          cell.v !== undefined &&
+          cell.v !== null &&
+          cell.v !== ''
+        ) || Boolean(cell && cell.f);
+      }
+
+      function cellSnapshot(cell) {
+        return {
+          address: cell && cell.r,
+          v: cell && cell.v,
+          value: cell && cell.value,
+          t: cell && cell.t,
+          cellType: cell && cell.cellType,
+          formula: cell && cell.f
+        };
+      }
+
+      function workbookSnapshot(instance, label) {
+        const doc = instance && instance.getDocument ? instance.getDocument() : null;
+        const workbook = doc && doc.workbook;
+        const sheets = workbook && Array.isArray(workbook.sheets) ? workbook.sheets : [];
+
+        const result = {
+          label,
+          documentWorkbookExists: Boolean(workbook),
+          sheetCount: sheets.length,
+          sheets: sheets.map((sheet, index) => {
+            const rows = sheet && sheet.sheetData && Array.isArray(sheet.sheetData.Rows)
+              ? sheet.sheetData.Rows
+              : [];
+            const cells = rows.reduce((all, row) => {
+              return all.concat(Array.isArray(row.cells) ? row.cells : []);
+            }, []);
+            const nonEmptyCells = cells.filter(isNonEmptyCell);
+            return {
+              index,
+              name: sheet && sheet.name,
+              sheetId: sheet && sheet.sheetId,
+              id: sheet && sheet.id,
+              dimension: sheet && sheet.dimension,
+              rowObjectCount: rows.length,
+              cellObjectCount: cells.length,
+              nonEmptyCellCount: nonEmptyCells.length,
+              samples: nonEmptyCells.slice(0, 10).map(cellSnapshot)
+            };
+          })
+        };
+
+        log(`${label}：内存工作簿快照`, result);
+        return result;
+      }
+
+      function parseXml(xmlText, fileName) {
+        const xml = new DOMParser().parseFromString(xmlText, 'application/xml');
+        const parseError = xml.getElementsByTagName('parsererror')[0];
+        if (parseError) {
+          throw new Error(`${fileName} XML 解析失败：${parseError.textContent}`);
+        }
+        return xml;
+      }
+
+      function elements(root, name) {
+        return Array.from(root.getElementsByTagNameNS('*', name));
+      }
+
+      function elementText(root, name) {
+        const item = elements(root, name)[0];
+        return item ? item.textContent : '';
+      }
+
+      async function zipSnapshot(blob) {
+        const zip = await JSZip.loadAsync(blob);
+        const names = Object.keys(zip.files).filter(name => !zip.files[name].dir);
+        const result = {
+          blobSize: blob.size,
+          files: names,
+          workbook: null,
+          relationships: [],
+          contentTypes: [],
+          sharedStrings: null,
+          sheets: [],
+          mappingIssues: []
+        };
+
+        const workbookFile = zip.file('xl/workbook.xml');
+        if (workbookFile) {
+          const workbookXmlText = await workbookFile.async('string');
+          const workbookXml = parseXml(workbookXmlText, 'xl/workbook.xml');
+          result.workbook = elements(workbookXml, 'sheet').map(sheet => ({
+            name: sheet.getAttribute('name'),
+            sheetId: sheet.getAttribute('sheetId'),
+            relationshipId: sheet.getAttributeNS(
+              'http://schemas.openxmlformats.org/officeDocument/2006/relationships',
+              'id'
+            ) || sheet.getAttribute('r:id')
+          }));
+        }
+
+        const relFile = zip.file('xl/_rels/workbook.xml.rels');
+        if (relFile) {
+          const relXml = parseXml(await relFile.async('string'), 'xl/_rels/workbook.xml.rels');
+          result.relationships = elements(relXml, 'Relationship').map(rel => ({
+            id: rel.getAttribute('Id'),
+            target: rel.getAttribute('Target'),
+            type: rel.getAttribute('Type')
+          }));
+        }
+
+        const contentTypesFile = zip.file('[Content_Types].xml');
+        if (contentTypesFile) {
+          const contentTypesXml = parseXml(
+            await contentTypesFile.async('string'),
+            '[Content_Types].xml'
+          );
+          result.contentTypes = elements(contentTypesXml, 'Override')
+            .map(item => item.getAttribute('PartName'))
+            .filter(partName => partName && partName.includes('/worksheets/'));
+        }
+
+        const sharedStringsFile = zip.file('xl/sharedStrings.xml');
+        if (sharedStringsFile) {
+          const sharedStringsXml = parseXml(
+            await sharedStringsFile.async('string'),
+            'xl/sharedStrings.xml'
+          );
+          result.sharedStrings = {
+            siCount: elements(sharedStringsXml, 'si').length,
+            textCount: elements(sharedStringsXml, 't').length,
+            firstValues: elements(sharedStringsXml, 'si')
+              .slice(0, 10)
+              .map(item => item.textContent)
+          };
+        }
+
+        const sheetNames = names
+          .filter(name => /^xl\/worksheets\/sheet\d+\.xml$/.test(name))
+          .sort((a, b) => {
+            const aNo = Number(a.match(/sheet(\d+)\.xml$/)[1]);
+            const bNo = Number(b.match(/sheet(\d+)\.xml$/)[1]);
+            return aNo - bNo;
+          });
+
+        for (const sheetName of sheetNames) {
+          const sheetXml = parseXml(
+            await zip.file(sheetName).async('string'),
+            sheetName
+          );
+          const cells = elements(sheetXml, 'c');
+          result.sheets.push({
+            file: sheetName,
+            rowCount: elements(sheetXml, 'row').length,
+            cellCount: cells.length,
+            valueCount: elements(sheetXml, 'v').length,
+            formulaCount: elements(sheetXml, 'f').length,
+            nonEmptyXmlCellCount: cells.filter(cell => {
+              return Boolean(elementText(cell, 'v') || elementText(cell, 'is') || elementText(cell, 'f'));
+            }).length,
+            samples: cells.slice(0, 10).map(cell => ({
+              address: cell.getAttribute('r'),
+              type: cell.getAttribute('t'),
+              value: elementText(cell, 'v'),
+              inlineValue: elementText(cell, 'is'),
+              formula: elementText(cell, 'f')
+            }))
+          });
+        }
+
+        const workbookSheets = result.workbook || [];
+        const relationshipMap = new Map(result.relationships.map(item => [item.id, item]));
+        const zipFileSet = new Set(result.files);
+        const contentTypeSet = new Set(result.contentTypes);
+        result.mappingIssues = workbookSheets.map((sheet, index) => {
+          const relation = relationshipMap.get(sheet.relationshipId) || null;
+          const target = relation && relation.target
+            ? relation.target.replace(/^\/+/, '')
+            : null;
+          const normalizedTarget = target
+            ? target.startsWith('xl/') ? target : `xl/${target}`
+            : null;
+          const expectedFile = `xl/worksheets/sheet${index + 1}.xml`;
+          return {
+            index,
+            name: sheet.name,
+            sheetId: sheet.sheetId,
+            relationshipId: sheet.relationshipId,
+            relationTarget: target,
+            relationTargetExists: Boolean(normalizedTarget && zipFileSet.has(normalizedTarget)),
+            expectedFile,
+            expectedFileExists: zipFileSet.has(expectedFile),
+            contentTypeExists: Boolean(normalizedTarget && contentTypeSet.has(`/${normalizedTarget}`))
+          };
+        }).filter(item => {
+          return !item.relationTargetExists ||
+            !item.expectedFileExists ||
+            !item.contentTypeExists;
+        });
+
+        log('导出 Blob：ZIP/XML 快照', result);
+        return result;
+      }
+
+      function compareSnapshots(modelSnapshot, xmlSnapshot, roundtripSnapshot) {
+        const comparison = modelSnapshot.sheets.map((modelSheet, index) => {
+          const xmlSheet = xmlSnapshot.sheets[index] || null;
+          const roundtripSheet = roundtripSnapshot && roundtripSnapshot.sheets[index] || null;
+          return {
+            index,
+            name: modelSheet.name,
+            modelNonEmptyCellCount: modelSheet.nonEmptyCellCount,
+            xmlCellCount: xmlSheet && xmlSheet.cellCount,
+            xmlValueCount: xmlSheet && xmlSheet.valueCount,
+            roundtripNonEmptyCellCount: roundtripSheet && roundtripSheet.nonEmptyCellCount
+          };
+        });
+
+        const diagnosis = [];
+        if (modelSnapshot.sheetCount > xmlSnapshot.sheets.length) {
+          diagnosis.push('内存中的 Sheet 数量多于导出的 worksheet XML，优先检查 SaveSheet 或导出文件生成流程。');
+        }
+        if (comparison.some(item => item.modelNonEmptyCellCount > 0 && item.xmlCellCount === 0)) {
+          diagnosis.push('内存模型有非空单元格，但对应 sheet XML 没有 c 节点，内容在 SaveSheetData 阶段丢失。');
+        }
+        if (comparison.some(item => item.modelNonEmptyCellCount > 0 && item.xmlValueCount === 0)) {
+          diagnosis.push('sheet XML 有单元格但没有 v 节点，重点检查 SaveSheetData 对 v 的判定及字符串写入。');
+        }
+        if (comparison.some(item => item.xmlCellCount > 0 &&
+          roundtripSnapshot &&
+          item.roundtripNonEmptyCellCount === 0)) {
+          diagnosis.push('导出 XML 有单元格，但回导入后模型为空，重点检查 workbook.xml、workbook.xml.rels、sharedStrings 及 Sheet 映射。');
+        }
+        if (xmlSnapshot.mappingIssues.length) {
+          const missingTargets = xmlSnapshot.mappingIssues.filter(item => !item.relationTargetExists);
+          const missingContentTypes = xmlSnapshot.mappingIssues.filter(item => !item.contentTypeExists);
+          const missingExpectedFiles = xmlSnapshot.mappingIssues.filter(item => !item.expectedFileExists);
+          if (missingTargets.length || missingExpectedFiles.length) {
+            diagnosis.push('workbook.xml 的 Sheet 关系目标与导出的 worksheet 文件不一致；sheetId 是工作簿逻辑编号，不能直接当作 sheetN.xml 文件编号。');
+          }
+          if (missingContentTypes.length) {
+            diagnosis.push('部分 worksheet XML 没有对应的 Content_Types Override，Excel 可能无法识别这些 Sheet。');
+          }
+        }
+        if (!diagnosis.length) {
+          diagnosis.push('当前快照未命中预置诊断条件，请结合完整日志比较每个 Sheet 的模型、XML 和回导入数量。');
+        }
+
+        log('阶段对比与初步诊断', {
+          comparison,
+          diagnosis,
+          mappingIssues: xmlSnapshot.mappingIssues
+        });
+        return { comparison, diagnosis };
+      }
+
+      function downloadBlob(blob, fileName) {
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      }
+
+      function createInstance(host, id) {
+        host.innerHTML = '';
+        return new websheet(
+          id,
+          host,
+          0,
+          0,
+          Math.max(460, Math.floor(window.innerWidth * 0.62)),
+          410
+        );
+      }
+
+      function loadBlob(instance, blob) {
+        return new Promise((resolve, reject) => {
+          try {
+            instance.loadFromBlob(blob, () => resolve(instance));
+          } catch (error) {
+            reject(error);
+          }
+        });
+      }
+
+      async function openSourceFile(file) {
+        sourceFile = file;
+        latestExportBlob = null;
+        downloadButton.disabled = true;
+        exportButton.disabled = true;
+        roundtripResult.textContent = '尚未回导入。';
+        setStatus(`正在打开 ${file.name} ...`);
+        log('源文件', {
+          name: file.name,
+          size: file.size,
+          type: file.type,
+          lastModified: file.lastModified
+        });
+
+        try {
+          sourceInstance = createInstance(sheetHost, 'open-save-debug-source');
+          await loadBlob(sourceInstance, file);
+          const sourceSnapshot = workbookSnapshot(sourceInstance, '打开完成');
+          exportButton.disabled = false;
+          setStatus(`打开完成：${sourceSnapshot.sheetCount} 个 Sheet，可以开始导出。`);
+        } catch (error) {
+          setStatus(`打开失败：${error && error.message ? error.message : error}`, true);
+          log('打开异常', {
+            message: error && error.message,
+            stack: error && error.stack
+          });
+        }
+      }
+
+      async function exportAndAnalyze() {
+        if (!sourceInstance || !sourceFile) return;
+        exportButton.disabled = true;
+        setStatus('正在导出并解析 Blob ...');
+
+        try {
+          const beforeExport = workbookSnapshot(sourceInstance, '导出前');
+          latestExportBlob = await new Promise((resolve, reject) => {
+            try {
+              sourceInstance.getDocument().SaveBlob(resolve);
+            } catch (error) {
+              reject(error);
+            }
+          });
+
+          const xmlSnapshot = await zipSnapshot(latestExportBlob);
+
+          roundtripInstance = createInstance(roundtripHost, 'open-save-debug-roundtrip');
+          await loadBlob(roundtripInstance, latestExportBlob);
+          const afterImport = workbookSnapshot(roundtripInstance, '导出 Blob 回导入完成');
+          const comparison = compareSnapshots(beforeExport, xmlSnapshot, afterImport);
+
+          roundtripResult.textContent =
+            `回导入完成：${afterImport.sheetCount} 个 Sheet。` +
+            ` 诊断：${comparison.diagnosis.join(' ')}`;
+          downloadButton.disabled = false;
+          exportButton.disabled = false;
+          setStatus(`分析完成：导出文件 ${latestExportBlob.size} 字节。`);
+        } catch (error) {
+          setStatus(`导出或回导入失败：${error && error.message ? error.message : error}`, true);
+          log('导出/回导入异常', {
+            message: error && error.message,
+            stack: error && error.stack
+          });
+          exportButton.disabled = false;
+        }
+      }
+
+      fileInput.addEventListener('change', event => {
+        const file = event.target.files && event.target.files[0];
+        if (file) openSourceFile(file);
+      });
+
+      exportButton.addEventListener('click', exportAndAnalyze);
+
+      downloadButton.addEventListener('click', () => {
+        if (latestExportBlob) {
+          downloadBlob(latestExportBlob, `${sourceFile ? sourceFile.name.replace(/\.xlsx$/i, '') : 'websheet'}-export-debug.xlsx`);
+        }
+      });
+
+      clearButton.addEventListener('click', () => {
+        logElement.textContent = '';
+        setStatus(sourceInstance ? '日志已清空，当前文件仍可继续分析。' : '等待选择文件。');
+      });
+
+      window.openSaveDebug = {
+        getSourceInstance: () => sourceInstance,
+        getLatestExportBlob: () => latestExportBlob,
+        workbookSnapshot
+      };
+    })();
+  </script>
+</body>
+
+</html>

@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>websheet Demo</title>
+ 
+  <style>
+    .hljs-ln-numbers {
+      text-align: right;
+      color: #7d7d7d;
+      padding-right: 15px;
+      border-right: 1px solid #555;
+    }
+
+    .code-container {
+      position: relative;
+    }
+
+    .copy-btn {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      padding: 4px 8px;
+      background: #f0f0f0;
+      border: 1px solid #ccc;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+
+    .copy-btn:hover {
+      background: #e0e0e0;
+    }
+  </style>
+  <link href="./dist/monokai-sublime.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="./dist/style.css">
+</head>
+
+<body>
+ 
+  <div id='yourElement'>
+  </div>
+
+  <div class="code-container">
+    <button class="copy-btn">复制</button>
+
+
+
+    <pre><code class="language-javascript"  >
+    let yourElement = document.getElementById("yourElement");
+    let wsheet = new websheet('HTML', yourElement,0,0,800,400);
+
+    //  /**
+    //   * 第一步 获取激活的activeSheet
+    //   */
+    let activeSheet = wsheet.ActiveSheet();
+
+
+    let r = 1;
+
+
+    //日期格式化
+    activeSheet.SetCellValue(r++, 1, '=NOW()');
+    activeSheet.SetCellValue(r++, 1, '=NOW()');
+    activeSheet.SetCellValue(r++, 1, '=NOW()');
+    //时间格式化
+    activeSheet.SetCellValue(r++, 1, '=NOW()');
+    activeSheet.SetCellValue(r++, 1, '=NOW()');
+    activeSheet.SetCellValue(r++, 1, '=NOW()');
+
+
+    /**
+    * 第二步   日期格式化
+    */
+    //yyyy/M/d 格式 
+    let numFmt14 = websheet.Model.NumFmts.numFmt14;
+    activeSheet.SetCellNumFmt('A1', numFmt14);
+
+    //yyyy年m月d日 格式 
+    let numFmt31 = websheet.Model.NumFmts.numFmt31;
+    activeSheet.SetCellNumFmt('A2', numFmt31);
+
+
+    //自定义 -  //yyyyAmBdC 格式
+    let numFmt200 = new websheet.Model.NumFmt();
+    numFmt200.numFmtId = 200;
+    numFmt200.formatCode = 'yyyy张m三d李 ';
+    activeSheet.SetCellNumFmt('A3', numFmt200);
+
+    /**
+    * 第二步   时间格式化
+    */
+
+    //h时mm分ss秒
+    let numFmt33 = websheet.Model.NumFmts.numFmt33;
+    activeSheet.SetCellNumFmt('A4', numFmt33);
+
+    //上午/下午 h时mm分ss秒
+    let numFmt35 = websheet.Model.NumFmts.numFmt35;
+    activeSheet.SetCellNumFmt('A5', numFmt35);
+
+    //h:mm:ss AM/PM
+    let numFmt19 = websheet.Model.NumFmts.numFmt19;
+    activeSheet.SetCellNumFmt('A6', numFmt19);
+
+
+    /**
+     * 第三步   重新绘制表格
+     */
+    activeSheet.setColWidth(1, 160);
+    activeSheet.WorkFormula(); //重建公式
+    activeSheet.cacl();//公式计算
+
+    wsheet.BuildSheet();
+    wsheet.Draw();
+
+
+    </code></pre>
+  </div>
+  <script type="module">
+    //let yourElement=document.getElementById("yourElement");
+    // window.websheet.hashvalue='66b76806d3d089f20fc92217e3e116722a99c654f6538d9916b266c736ee2314';
+    // window.websheet.signList=[{domian:'localhost',company:'websheet',signvalue:'1C7dwqFVAEq504alFHIN6cRkeiJuob2cnMSYhJ9cB99dgCl1xqqrywYSkivqnpPue03ySREJbLB7+B5EyxLEBMNgidLCMCmM68jSFAcJQzFQekXjQvIPMCMHR9EB3U3E'},]
+ 
+    let yourElement = document.getElementById("yourElement");
+   let wsheet = new websheet('HTML', yourElement, 0, 0, document.documentElement.clientWidth * 0.99, document.documentElement.clientHeight*0.6);
+
+    //  /**
+    //   * 第一步 获取激活的activeSheet
+    //   */
+    let activeSheet = wsheet.ActiveSheet();
+
+
+    let r = 1;
+
+
+    //日期格式化
+    activeSheet.SetCellValue(r++, 1, '=NOW()');
+    activeSheet.SetCellValue(r++, 1, '=NOW()');
+    activeSheet.SetCellValue(r++, 1, '=NOW()');
+    //时间格式化
+    activeSheet.SetCellValue(r++, 1, '=NOW()');
+    activeSheet.SetCellValue(r++, 1, '=NOW()');
+    activeSheet.SetCellValue(r++, 1, '=NOW()');
+
+
+    /**
+    * 第二步   日期格式化
+    */
+    //yyyy/M/d 格式 
+    let numFmt14 = websheet.Model.NumFmts.numFmt14;
+    activeSheet.SetCellNumFmt('A1', numFmt14);
+
+    //yyyy年m月d日 格式 
+    let numFmt31 = websheet.Model.NumFmts.numFmt31;
+    activeSheet.SetCellNumFmt('A2', numFmt31);
+
+
+    //自定义 -  //yyyyAmBdC 格式
+    let numFmt200 = new websheet.Model.NumFmt();
+    numFmt200.numFmtId = 200;
+    numFmt200.formatCode = 'yyyy张m三d李 ';
+    activeSheet.SetCellNumFmt('A3', numFmt200);
+
+    /**
+    * 第二步   时间格式化
+    */
+
+    //h时mm分ss秒
+    let numFmt33 = websheet.Model.NumFmts.numFmt33;
+    activeSheet.SetCellNumFmt('A4', numFmt33);
+
+    //上午/下午 h时mm分ss秒
+    let numFmt35 = websheet.Model.NumFmts.numFmt35;
+    activeSheet.SetCellNumFmt('A5', numFmt35);
+
+    //h:mm:ss AM/PM
+    let numFmt19 = websheet.Model.NumFmts.numFmt19;
+    activeSheet.SetCellNumFmt('A6', numFmt19);
+
+
+    /**
+     * 第三步   重新绘制表格
+     */
+    activeSheet.setColWidth(1, 160);
+    activeSheet.WorkFormula(); //重建公式
+    activeSheet.cacl();//公式计算
+
+    wsheet.BuildSheet();
+    wsheet.Draw();
+
+
+  </script>
+
+  
+<script src="./dist/highlight.min.js"></script>
+<script src="./dist/highlightjs-line-numbers.min.js"></script>
+
+<script>
+
+  // 高亮代码并添加行号
+  document.addEventListener('DOMContentLoaded', () => {
+    hljs.highlightAll();
+    // 添加行号（支持 CSS 选择器）
+    hljs.initLineNumbersOnLoad();
+  });
+
+
+
+  document.querySelectorAll('.code-container').forEach(container => {
+    const btn = container.querySelector('.copy-btn');
+    const codeBlock = container.querySelector('code');
+
+    btn.addEventListener('click', () => {
+      // 现代浏览器 API（推荐）
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(codeBlock.textContent)
+          .then(() => {
+            btn.textContent = '已复制!';
+            setTimeout(() => btn.textContent = '复制', 1500);
+          });
+      }
+      // 兼容旧浏览器的降级方案
+      else {
+        const textarea = document.createElement('textarea');
+        textarea.value = codeBlock.textContent;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+        btn.textContent = '已复制!';
+        setTimeout(() => btn.textContent = '复制', 1500);
+      }
+    });
+  });
+
+</script>
+
+<script src="./dist/crypto-js.min.js"></script>
+<script src="./dist/jsrsasign-all-min.js"></script>
+<script type="text/javascript" src="./dist/xmlbuilder2.min.js"></script>
+<script type="text/javascript" src="./dist/websheet.umd.js"></script>
+</body>
+
+</html>
